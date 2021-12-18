@@ -46,11 +46,14 @@ void Interpreter::execute(Stmt* stmt)
 	stmt->accept(this);
 }
 
-void Interpreter::executeBlock(const std::vector<Stmt*>& stmts, const std::unique_ptr<Environment> environment)
+//void Interpreter::executeBlock(const std::vector<Stmt*>& stmts, const std::shared_ptr<Environment> environment)
+void Interpreter::executeBlock(const std::vector<Stmt*>& stmts, Environment* environment)
 {
 	Environment* previous = m_environment;
+
 	// make a new scope
-	m_environment = environment.get();
+	//m_environment = environment.get();
+	m_environment = environment;
 
 	try
 	{
@@ -218,7 +221,8 @@ void Interpreter::visitAssignExpr(Expr::Assign& expr, void* returnValue)
 // Statements
 void Interpreter::visitBlockStmt(Stmt::Block& stmt)
 {
-	executeBlock(stmt.statements, std::make_unique<Environment>(m_environment));
+	//executeBlock(stmt.statements, std::make_unique<Environment>(m_environment));
+	executeBlock(stmt.statements, new Environment(m_environment));
 }
 void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
 {

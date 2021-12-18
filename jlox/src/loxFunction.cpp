@@ -14,7 +14,8 @@ Object LoxFunction::call(Interpreter* interpreter, const std::vector<Object> arg
 	// when you call a function it is in global scope
 	//const auto environment = std::make_unique<Environment>(&interpreter->globals);
 
-	const auto environment = std::make_unique<Environment>(m_closure);
+	//const auto environment = std::make_unique<Environment>(m_closure);
+	const auto environment = new Environment(m_closure);
 
 	for (size_t i = 0; i < m_declaration->params.size(); i++)
 	{
@@ -23,7 +24,8 @@ Object LoxFunction::call(Interpreter* interpreter, const std::vector<Object> arg
 
 	try
 	{
-		interpreter->executeBlock(m_declaration->body, std::make_unique<Environment>(environment.get()));
+		//interpreter->executeBlock(m_declaration->body, std::make_unique<Environment>(environment.get()));
+		interpreter->executeBlock(m_declaration->body, new Environment(environment));
 	}
 	catch (Return& r)
 	{

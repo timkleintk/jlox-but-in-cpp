@@ -60,7 +60,7 @@ public:
 
 	Environment globals;
 
-	void executeBlock(const std::vector<Stmt*>& stmts, std::unique_ptr<Environment> environment);
+	void executeBlock(const std::vector<Stmt*>& stmts, Environment* environment);
 private:
 
 	Environment* m_environment = nullptr;

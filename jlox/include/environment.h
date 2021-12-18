@@ -13,6 +13,7 @@ public:
 
 	Environment* enclosing = nullptr;
 
+
 	Object get(const Token& name)
 	{
 		// current scope
