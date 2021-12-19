@@ -39,6 +39,9 @@
     <ClCompile Include="src\parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\resolver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\scanner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -72,6 +75,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resolver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\return.h">

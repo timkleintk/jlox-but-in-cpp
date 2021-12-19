@@ -32,7 +32,27 @@ public:
 		m_values.insert_or_assign(name, value);
 	}
 
-	void assign(const Token& name, Object value)
+	Environment& ancestor(const int distance)
+	{
+		Environment* environment = this;
+		for (int i = 0; i < distance; i++)
+		{
+			environment = environment->enclosing;
+		}
+		return *environment;
+	}
+
+	Object getAt(const int distance, const std::string& name)
+	{
+		return ancestor(distance).m_values.at(name);
+	}
+
+	void assignAt(const int distance, const Token& name, const Object& value)
+	{
+		ancestor(distance).m_values.insert_or_assign(name.lexeme, value);
+	}
+
+	void assign(const Token& name, const Object& value)
 	{
 		if (m_values.contains(name.lexeme))
 		{
@@ -48,6 +68,7 @@ public:
 
 		throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
 	}
+
 private:
 	std::unordered_map<std::string, Object> m_values;
 };

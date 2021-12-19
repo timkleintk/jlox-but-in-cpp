@@ -208,12 +208,23 @@ void Interpreter::visitUnaryExpr(Expr::Unary& expr, void* returnValue)
 }
 void Interpreter::visitVariableExpr(Expr::Variable& expr, void* returnValue)
 {
-	RET(m_environment->get(expr.name));
+	RET(lookUpVariable(expr.name, &expr));
+	//RET(m_environment->get(expr.name));
 }
 void Interpreter::visitAssignExpr(Expr::Assign& expr, void* returnValue)
 {
 	const Object value = evaluate(expr.value);
-	m_environment->assign(expr.name, value);
+
+	if (const auto it = locals.find(&expr); it != locals.end())
+	{
+		m_environment->assignAt(it->second, expr.name, value);
+	}
+	else
+	{
+		globals.assign(expr.name, value);
+	}
+
+	//m_environment->assign(expr.name, value);
 	RET(value);
 }
 #undef RET
@@ -281,6 +292,17 @@ void Interpreter::visitWhileStmt(Stmt::While& stmt)
 	}
 }
 
+void Interpreter::resolve(const Expr* expr, int depth)
+{
+	locals.insert_or_assign(expr, depth);
+}
+
+Object Interpreter::lookUpVariable(const Token& name, const Expr* expr)
+{
+	if (const auto it = locals.find(expr); it != locals.end())
+	{ return m_environment->getAt(it->second, name.lexeme); }
+	return globals.get(name);
+}
 
 void Interpreter::checkNumberOperand(const Token& op, const Object& operand)
 {

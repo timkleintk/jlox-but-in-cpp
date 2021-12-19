@@ -18,7 +18,7 @@ public:
 
 	static void Error(int line, const std::string& message);
 
-	static void runtimeError(RuntimeError& error);
+	static void runtimeError(const RuntimeError& error);
 
 private:
 	static Interpreter interpreter;

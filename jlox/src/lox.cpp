@@ -8,6 +8,7 @@
 
 #include "astPrinter.h"
 #include "parser.h"
+#include "resolver.h"
 #include "RuntimeError.h"
 #include "scanner.h"
 
@@ -54,7 +55,7 @@ void Lox::Error(const int line, const std::string& message)
 	Report(line, "", message);
 }
 
-void Lox::runtimeError(RuntimeError& error)
+void Lox::runtimeError(const RuntimeError& error)
 {
 	std::cerr << error.what() << std::endl << "[line " << error.token.line << "]" << std::endl;
 	hadRuntimeError = true;
@@ -82,13 +83,22 @@ bool Lox::hadRuntimeError = false;
 
 void Lox::Run(const std::string& source)
 {
+	// tokenize string
 	const std::vector<Token> tokens = ScanTokens(source);
 
+	// parse tokens
 	const std::vector<Stmt*> statements = ParseTokens(tokens);
 
 	// Stop if there was a syntax error.
 	if (hadError) { return; }
 
+	// resolve variable names
+	Resolver(interpreter).resolve(statements);
+
+	// Stop if there was a resolution error.
+	if (hadError) { return; }
+
+	// interpret
 	interpreter.interpret(statements);
 }
 

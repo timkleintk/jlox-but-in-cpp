@@ -97,6 +97,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\object.cpp" />
     <ClCompile Include="src\parser.cpp" />
+    <ClCompile Include="src\resolver.cpp" />
     <ClCompile Include="src\scanner.cpp" />
     <ClCompile Include="src\token.cpp" />
   </ItemGroup>
@@ -110,6 +111,7 @@
     <ClInclude Include="include\loxFunction.h" />
     <ClInclude Include="include\object.h" />
     <ClInclude Include="include\parser.h" />
+    <ClInclude Include="include\resolver.h" />
     <ClInclude Include="include\return.h" />
     <ClInclude Include="include\RuntimeError.h" />
     <ClInclude Include="include\scanner.h" />

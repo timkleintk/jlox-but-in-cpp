@@ -1,11 +1,48 @@
 #pragma once
 
+#include <deque>
 #include <string>
 #include <vector>
 
 #include "environment.h"
 #include "expr.h"
 #include "object.h"
+
+class Interpreter final : public Expr::Visitor, public Stmt::Visitor
+{
+public:
+	Interpreter();
+
+	~Interpreter() override;
+	void interpret(const std::vector<Stmt*>& statements);
+
+#define TYPE(name, ...) void visit ## name ## Expr(Expr::name& expr, void* returnValue) override;
+	EXPR_TYPES;
+#undef TYPE
+#define TYPE(name, ...) void visit ## name ## Stmt(Stmt::name& stmt) override;
+	STMT_TYPES;
+#undef TYPE
+
+	void resolve(const Expr* expr, int depth);
+	Object lookUpVariable(const Token& name, const Expr* expr);
+
+	Environment globals;
+	std::unordered_map<const Expr*, int> locals;
+
+	void executeBlock(const std::vector<Stmt*>& stmts, Environment* environment);
+private:
+
+	Environment* m_environment = nullptr;
+
+	void checkNumberOperand(const Token& op, const Object& operand);
+	void checkNumberOperands(const Token& op, const Object& left, const Object& right);
+
+	Object evaluate(Expr* expr);
+
+	void execute(Stmt* stmt);
+
+};
+
 
 
 inline bool IsNumber(const Object& object)
@@ -43,34 +80,4 @@ inline bool IsEqual(const Object& left, const Object& right)
 	return left.equals(right);
 }
 
-class Interpreter final : public Expr::Visitor, public Stmt::Visitor
-{
-public:
-	Interpreter();
-
-	~Interpreter() override;
-	void interpret(const std::vector<Stmt*>& statements);
-	
-#define TYPE(name, ...) void visit ## name ## Expr(Expr::name& expr, void* returnValue) override;
-	EXPR_TYPES
-#undef TYPE
-#define TYPE(name, ...) void visit ## name ## Stmt(Stmt::name& stmt) override;
-	STMT_TYPES
-#undef TYPE
-
-	Environment globals;
-
-	void executeBlock(const std::vector<Stmt*>& stmts, Environment* environment);
-private:
-
-	Environment* m_environment = nullptr;
-
-	void checkNumberOperand(const Token& op, const Object& operand);
-	void checkNumberOperands(const Token& op, const Object& left, const Object& right);
-
-	Object evaluate(Expr* expr);
-
-	void execute(Stmt* stmt);
-
-};
 
