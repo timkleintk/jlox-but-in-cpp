@@ -89,11 +89,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\environment.cpp" />
     <ClCompile Include="src\expr.cpp" />
     <ClCompile Include="src\interpreter.cpp" />
     <ClCompile Include="src\lox.cpp" />
     <ClCompile Include="src\loxCallable.cpp" />
+    <ClCompile Include="src\loxClass.cpp" />
     <ClCompile Include="src\loxFunction.cpp" />
+    <ClCompile Include="src\loxInstance.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\object.cpp" />
     <ClCompile Include="src\parser.cpp" />
@@ -108,7 +111,9 @@
     <ClInclude Include="include\interpreter.h" />
     <ClInclude Include="include\lox.h" />
     <ClInclude Include="include\loxCallable.h" />
+    <ClInclude Include="include\loxClass.h" />
     <ClInclude Include="include\loxFunction.h" />
+    <ClInclude Include="include\loxInstance.h" />
     <ClInclude Include="include\object.h" />
     <ClInclude Include="include\parser.h" />
     <ClInclude Include="include\resolver.h" />

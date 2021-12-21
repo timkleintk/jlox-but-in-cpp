@@ -29,7 +29,7 @@ class Token
 {
 public:
 	//Token(TokenType type, std::string lexeme, StrNum literal, int line);
-	Token(TokenType type, std::string lexeme, Object literal, int line);
+	Token(TokenType type, std::string lexeme, const Object& literal, int line);
 	
 
 	TokenType type;

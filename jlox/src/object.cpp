@@ -1,6 +1,8 @@
 #include "object.h"
 
 #include "loxCallable.h"
+#include "loxClass.h"
+#include "loxInstance.h"
 
 Object::Object(): type(Type::UNINITIALIZED)
 {}
@@ -23,8 +25,11 @@ Object Object::Nil()
 Object::Object(std::unique_ptr<LoxCallable>&& value): type(Type::CALLABLE), callable(std::move(value))
 {}
 
-//Object::Object(std::unique_ptr<LoxCallable>&& callable): type(Type::CALLABLE), callable(std::move(callable))
-//{}
+Object::Object(std::unique_ptr<LoxClass>&& value) : type(Type::CLASS), klass(std::move(value))
+{}
+
+Object::Object(std::unique_ptr<LoxInstance>&& value): type(Type::INSTANCE), instance(std::move(value))
+{}
 
 
 Object::Object(const Object& object)
@@ -39,6 +44,8 @@ Object::Object(const Object& object)
 	case Type::NUMBER: number = object.number; break;
 	case Type::NIL: break;
 	case Type::CALLABLE: callable = object.callable->GetCopy(); break;
+	case Type::CLASS: klass = std::unique_ptr<LoxClass>(static_cast<LoxClass*>(object.klass->GetCopy().release())); break;
+	case Type::INSTANCE: instance = std::make_unique<LoxInstance>(*object.instance); break;
 	default:
 		throw std::exception("Copy constructed 'Object' with unknown type");
 	}
@@ -56,6 +63,8 @@ Object& Object::operator=(const Object& object)
 	case Type::NUMBER: number = object.number; break;
 	case Type::NIL: break;
 	case Type::CALLABLE: callable = object.callable->GetCopy(); break;
+	case Type::CLASS: klass = std::make_unique<LoxClass>(*object.klass); break;
+	case Type::INSTANCE: instance = std::make_unique<LoxInstance>(*object.instance); break;
 	default:
 		throw std::exception("assignment operator for 'Object' with unknown type");
 	}
@@ -74,6 +83,8 @@ std::string Object::AsString() const
 	case Type::NUMBER: return std::to_string(number);
 	case Type::NIL: return "nil";
 	case Type::CALLABLE: return callable->toString();
+	case Type::CLASS: return klass->toString();
+	case Type::INSTANCE: return instance->toString();
 	default: return "something went wrong here";
 	}
 }

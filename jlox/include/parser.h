@@ -28,6 +28,7 @@ public:
 private:
 	Expr* expression();
 	Stmt* declaration();
+	Stmt* classDeclaration();
 	Stmt* statement();
 	Stmt* forStatement();
 	Stmt* ifStatement();

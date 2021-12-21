@@ -20,7 +20,8 @@ private:
 	enum class FunctionType
 	{
 		NONE,
-		FUNCTION
+		FUNCTION,
+		METHOD
 	};
 
 	void resolve(Stmt* stmt);

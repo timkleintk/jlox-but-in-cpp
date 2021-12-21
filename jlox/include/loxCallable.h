@@ -4,8 +4,6 @@
 class Interpreter;
 class Object;
 
-//using loxFuc = 
-
 class LoxCallable
 {
 public:
@@ -23,5 +21,5 @@ public:
 private:
 
 	int m_arity;
-	const std::function<Object(Interpreter*, std::vector<Object>)>& m_call;
+	std::function<Object(Interpreter*, std::vector<Object>)> m_call;
 };

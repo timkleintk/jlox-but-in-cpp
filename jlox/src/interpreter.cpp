@@ -1,12 +1,14 @@
 #include "interpreter.h"
 
 #include <any>
+#include <cassert>
 #include <chrono>
 #include <iostream>
 #include <vector>
 
 #include "lox.h"
 #include "loxCallable.h"
+#include "loxClass.h"
 #include "loxFunction.h"
 #include "return.h"
 #include "RuntimeError.h"
@@ -31,7 +33,7 @@ Interpreter::Interpreter()
 
 Interpreter::~Interpreter()
 {
-	delete m_environment;
+	assert(m_environment == &globals);
 }
 
 Object Interpreter::evaluate(Expr* expr)
@@ -148,12 +150,12 @@ void Interpreter::visitCallExpr(Expr::Call& expr, void* returnValue)
 		arguments.push_back(evaluate(arg));
 	}
 
-	if (callee.type != Object::Type::CALLABLE)
+	if (!(callee.type == Object::Type::CALLABLE || callee.type == Object::Type::CLASS))
 	{
 		throw RuntimeError(std::move(expr.paren), "Can only call functions and classes.");
 	}
 
-	const LoxCallable* function = callee.callable.get();
+	const LoxCallable* function = callee.type == Object::Type::CALLABLE ? callee.callable.get() : callee.klass.get();
 
 	if (arguments.size() != function->arity())
 	{
@@ -161,6 +163,17 @@ void Interpreter::visitCallExpr(Expr::Call& expr, void* returnValue)
 	}
 
 	RET(function->call(this, arguments));
+}
+
+void Interpreter::visitGetExpr(Expr::Get& expr, void* returnValue)
+{
+	Object object = evaluate(expr.object);
+	if (object.type == Object::Type::INSTANCE)
+	{
+		RET(object.instance->get(expr.name));
+	}
+
+	throw RuntimeError(expr.name, "Only instances have properties.");
 }
 
 void Interpreter::visitGroupingExpr(Expr::Grouping& expr, void* returnValue)
@@ -188,6 +201,17 @@ void Interpreter::visitLogicalExpr(Expr::Logical& expr, void* returnValue)
 	}
 
 	RET(evaluate(expr.right));
+}
+void Interpreter::visitSetExpr(Expr::Set& expr, void* returnValue)
+{
+	Object object = evaluate(expr.object);
+
+	if (object.type != Object::Type::INSTANCE)
+	{ throw RuntimeError(expr.name, "Only instances have fields."); }
+
+	Object value = evaluate(expr.value);
+	object.instance->set(expr.name, value);
+	RET(value);
 }
 
 void Interpreter::visitUnaryExpr(Expr::Unary& expr, void* returnValue)
@@ -235,6 +259,21 @@ void Interpreter::visitBlockStmt(Stmt::Block& stmt)
 	//executeBlock(stmt.statements, std::make_unique<Environment>(m_environment));
 	executeBlock(stmt.statements, new Environment(m_environment));
 }
+
+void Interpreter::visitClassStmt(Stmt::Class& stmt)
+{
+	m_environment->define(stmt.name.lexeme, Object::Nil());
+
+	std::unordered_map<std::string, LoxFunction> methods;
+	for (Stmt::Function& method : stmt.methods)
+	{
+		LoxFunction function(method, m_environment);
+		methods.insert_or_assign(method.name.lexeme, function);
+	}
+
+	m_environment->assign(stmt.name, Object(std::make_unique<LoxClass>(stmt.name.lexeme, methods)));
+}
+
 void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
 {
 	evaluate(stmt.expression);

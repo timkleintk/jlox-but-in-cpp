@@ -51,6 +51,7 @@ Stmt* Parser::declaration()
 {
 	try
 	{
+		if (match(CLASS)) return classDeclaration();
 		if (match(FUN)) return function("function");
 		if (match(VAR)) return varDeclaration();
 		return statement();
@@ -60,6 +61,23 @@ Stmt* Parser::declaration()
 		synchronize();
 		return nullptr;
 	}
+}
+
+Stmt* Parser::classDeclaration()
+{
+	Token name = consume(IDENTIFIER, "Expect class name.");
+	consume(LEFT_BRACE, "Expect '{' before class body.");
+
+	std::vector<Stmt::Function> methods;
+	while (!check(RIGHT_BRACE) && !isAtEnd())
+	{
+		std::unique_ptr<Stmt::Function> p(function("method"));
+		methods.push_back(*p);
+	}
+
+	consume(RIGHT_BRACE, "Expect '}' after class body.");
+
+	return new Stmt::Class(name, methods);
 }
 
 Stmt* Parser::statement()
@@ -218,7 +236,7 @@ Stmt::Function* Parser::function(std::string kind)
 	consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
 	consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
-	std::vector<Stmt*> body = block();
+	const std::vector<Stmt*> body = block();
 	return new Stmt::Function(name, parameters, body);
 }
 
@@ -244,10 +262,17 @@ Expr* Parser::assignment()
 		const Token equals = previous();
 		Expr* value = assignment();
 
+		// variable
 		if (auto* var = dynamic_cast<Expr::Variable*>(expr); var != nullptr)
 		{
 			const Token name = var->name;
 			return new Expr::Assign(name, value);
+		}
+
+		// field
+		if (const auto get = dynamic_cast<Expr::Get*>(expr); get != nullptr)
+		{
+			return new Expr::Set(get->object, get->name, value);
 		}
 
 		error(equals, "Invalid assignment target.");
@@ -377,6 +402,11 @@ Expr* Parser::call()
 		if (match(LEFT_PAREN))
 		{
 			expr = finishCall(expr);
+		}
+		else if (match(DOT))
+		{
+			const Token name = consume(IDENTIFIER, "Expect property name after '.'.");
+			expr = new Expr::Get(expr, name);
 		}
 		else
 		{

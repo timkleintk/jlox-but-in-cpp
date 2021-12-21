@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\environment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\expr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -27,7 +30,13 @@
     <ClCompile Include="src\loxCallable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\loxClass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\loxFunction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\loxInstance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp">
@@ -68,7 +77,13 @@
     <ClInclude Include="include\loxCallable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\loxClass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\loxFunction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\loxInstance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\object.h">

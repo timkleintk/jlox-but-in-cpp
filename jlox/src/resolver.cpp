@@ -35,6 +35,11 @@ void Resolver::visitCallExpr(Expr::Call& expr, void*)
 	}
 }
 
+void Resolver::visitGetExpr(Expr::Get& expr, void* )
+{
+	resolve(expr.object);
+}
+
 void Resolver::visitGroupingExpr(Expr::Grouping& expr, void*)
 {
 	resolve(expr.expression);
@@ -48,6 +53,13 @@ void Resolver::visitLogicalExpr(Expr::Logical& expr, void*)
 	resolve(expr.left);
 	resolve(expr.right);
 }
+
+void Resolver::visitSetExpr(Expr::Set& expr, void* )
+{
+	resolve(expr.value);
+	resolve(expr.object);
+}
+
 
 void Resolver::visitUnaryExpr(Expr::Unary& expr, void*)
 {
@@ -72,6 +84,17 @@ void Resolver::visitBlockStmt(Stmt::Block& stmt)
 	beginScope();
 	resolve(stmt.statements);
 	endScope();
+}
+
+void Resolver::visitClassStmt(Stmt::Class& stmt)
+{
+	declare(stmt.name);
+	define(stmt.name);
+	for (const Stmt::Function& method : stmt.methods)
+	{
+		const FunctionType declaration = FunctionType::METHOD;
+		resolveFunction(method, declaration);
+	}
 }
 
 void Resolver::visitExpressionStmt(Stmt::Expression& stmt)

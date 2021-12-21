@@ -1,7 +1,7 @@
 #pragma once
 
 #include "token.h"
-#include "object.h"
+
 
 // nts: make one more abstraction so that expr and stmt are automatically handled correctly
 
@@ -11,14 +11,17 @@
 	TYPE(Assign, 2, Token, name, Expr*, value) \
     TYPE(Binary, 3, Expr*, left, Token, op, Expr*, right) \
 	TYPE(Call, 3, Expr*, callee, Token, paren, std::vector<Expr*>, arguments) \
+	TYPE(Get, 2, Expr*, object, Token, name) \
 	TYPE(Grouping, 1, Expr*, expression) \
 	TYPE(Literal, 1, Object, value) \
 	TYPE(Logical, 3, Expr*, left, Token, op, Expr*, right) \
+	TYPE(Set, 3, Expr*, object, Token, name, Expr*, value) \
 	TYPE(Unary, 2, Token, op, Expr*, right) \
 	TYPE(Variable, 1, Token, name)
 
 #define STMT_TYPES \
 	TYPE(Block, 1, std::vector<Stmt*>, statements) \
+	TYPE(Class, 2, Token, name, std::vector<Stmt::Function>, methods) \
 	TYPE(Expression, 1, Expr*, expression) \
 	TYPE(Function, 3, Token, name, std::vector<Token>, params, std::vector<Stmt*>, body) \
 	TYPE(If, 3, Expr*, condition, Stmt*, thenBranch, Stmt*, elseBranch) \
@@ -26,7 +29,6 @@
 	TYPE(Return, 2, Token, keyword, Expr*, value) \
 	TYPE(Var, 2, Token, name, Expr*, initializer) \
 	TYPE(While, 2, Expr*, condition, Stmt*, body)
-
 
 
 class Expr
@@ -95,7 +97,7 @@ class Expr::name: public Expr \
 };
 
 //EXPR_TYPES
-class Expr::Assign: public Expr { public: Assign(Token name, Expr* value): name(name), value(value) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitAssignExpr(*this, returnValue); } Token name; Expr* value; }; class Expr::Binary: public Expr { public: Binary(Expr* left, Token op, Expr* right): left(left), op(op), right(right) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitBinaryExpr(*this, returnValue); } Expr* left; Token op; Expr* right; }; class Expr::Call: public Expr { public: Call(Expr* callee, Token paren, std::vector<Expr*> arguments): callee(callee), paren(paren), arguments(arguments) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitCallExpr(*this, returnValue); } Expr* callee; Token paren; std::vector<Expr*> arguments; }; class Expr::Grouping: public Expr { public: Grouping(Expr* expression): expression(expression) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitGroupingExpr(*this, returnValue); } Expr* expression; }; class Expr::Literal: public Expr { public: Literal(Object value): value(value) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitLiteralExpr(*this, returnValue); } Object value; }; class Expr::Logical: public Expr { public: Logical(Expr* left, Token op, Expr* right): left(left), op(op), right(right) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitLogicalExpr(*this, returnValue); } Expr* left; Token op; Expr* right; }; class Expr::Unary: public Expr { public: Unary(Token op, Expr* right): op(op), right(right) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitUnaryExpr(*this, returnValue); } Token op; Expr* right; }; class Expr::Variable: public Expr { public: Variable(Token name): name(name) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitVariableExpr(*this, returnValue); } Token name; };
+class Expr::Assign: public Expr { public: Assign(Token name, Expr* value): name(name), value(value) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitAssignExpr(*this, returnValue); } Token name; Expr* value; }; class Expr::Binary: public Expr { public: Binary(Expr* left, Token op, Expr* right): left(left), op(op), right(right) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitBinaryExpr(*this, returnValue); } Expr* left; Token op; Expr* right; }; class Expr::Call: public Expr { public: Call(Expr* callee, Token paren, std::vector<Expr*> arguments): callee(callee), paren(paren), arguments(arguments) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitCallExpr(*this, returnValue); } Expr* callee; Token paren; std::vector<Expr*> arguments; }; class Expr::Get: public Expr { public: Get(Expr* object, Token name): object(object), name(name) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitGetExpr(*this, returnValue); } Expr* object; Token name; }; class Expr::Grouping: public Expr { public: Grouping(Expr* expression): expression(expression) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitGroupingExpr(*this, returnValue); } Expr* expression; }; class Expr::Literal: public Expr { public: Literal(Object value): value(value) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitLiteralExpr(*this, returnValue); } Object value; }; class Expr::Logical: public Expr { public: Logical(Expr* left, Token op, Expr* right): left(left), op(op), right(right) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitLogicalExpr(*this, returnValue); } Expr* left; Token op; Expr* right; }; class Expr::Set: public Expr { public: Set(Expr* object, Token name, Expr* value): object(object), name(name), value(value) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitSetExpr(*this, returnValue); } Expr* object; Token name; Expr* value; }; class Expr::Unary: public Expr { public: Unary(Token op, Expr* right): op(op), right(right) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitUnaryExpr(*this, returnValue); } Token op; Expr* right; }; class Expr::Variable: public Expr { public: Variable(Token name): name(name) {} void accept(Visitor* visitor, void* returnValue) override { visitor->visitVariableExpr(*this, returnValue); } Token name; };
 
 
 #undef TYPE
@@ -109,7 +111,7 @@ class Stmt::name: public Stmt \
 };
 
 //STMT_TYPES
-class Stmt::Block: public Stmt { public: Block(std::vector<Stmt*> statements): statements(statements) {} void accept(Visitor* visitor) override { visitor->visitBlockStmt(*this); } std::vector<Stmt*> statements; }; class Stmt::Expression: public Stmt { public: Expression(Expr* expression): expression(expression) {} void accept(Visitor* visitor) override { visitor->visitExpressionStmt(*this); } Expr* expression; }; class Stmt::Function: public Stmt { public: Function(Token name, std::vector<Token> params, std::vector<Stmt*> body): name(name), params(params), body(body) {} void accept(Visitor* visitor) override { visitor->visitFunctionStmt(*this); } Token name; std::vector<Token> params; std::vector<Stmt*> body; }; class Stmt::If: public Stmt { public: If(Expr* condition, Stmt* thenBranch, Stmt* elseBranch): condition(condition), thenBranch(thenBranch), elseBranch(elseBranch) {} void accept(Visitor* visitor) override { visitor->visitIfStmt(*this); } Expr* condition; Stmt* thenBranch; Stmt* elseBranch; }; class Stmt::Print: public Stmt { public: Print(Expr* expression): expression(expression) {} void accept(Visitor* visitor) override { visitor->visitPrintStmt(*this); } Expr* expression; }; class Stmt::Return: public Stmt { public: Return(Token keyword, Expr* value): keyword(keyword), value(value) {} void accept(Visitor* visitor) override { visitor->visitReturnStmt(*this); } Token keyword; Expr* value; }; class Stmt::Var: public Stmt { public: Var(Token name, Expr* initializer): name(name), initializer(initializer) {} void accept(Visitor* visitor) override { visitor->visitVarStmt(*this); } Token name; Expr* initializer; }; class Stmt::While: public Stmt { public: While(Expr* condition, Stmt* body): condition(condition), body(body) {} void accept(Visitor* visitor) override { visitor->visitWhileStmt(*this); } Expr* condition; Stmt* body; };
+class Stmt::Block: public Stmt { public: Block(std::vector<Stmt*> statements): statements(statements) {} void accept(Visitor* visitor) override { visitor->visitBlockStmt(*this); } std::vector<Stmt*> statements; }; class Stmt::Class: public Stmt { public: Class(Token name, std::vector<Stmt::Function> methods): name(name), methods(methods) {} void accept(Visitor* visitor) override { visitor->visitClassStmt(*this); } Token name; std::vector<Stmt::Function> methods; }; class Stmt::Expression: public Stmt { public: Expression(Expr* expression): expression(expression) {} void accept(Visitor* visitor) override { visitor->visitExpressionStmt(*this); } Expr* expression; }; class Stmt::Function: public Stmt { public: Function(Token name, std::vector<Token> params, std::vector<Stmt*> body): name(name), params(params), body(body) {} void accept(Visitor* visitor) override { visitor->visitFunctionStmt(*this); } Token name; std::vector<Token> params; std::vector<Stmt*> body; }; class Stmt::If: public Stmt { public: If(Expr* condition, Stmt* thenBranch, Stmt* elseBranch): condition(condition), thenBranch(thenBranch), elseBranch(elseBranch) {} void accept(Visitor* visitor) override { visitor->visitIfStmt(*this); } Expr* condition; Stmt* thenBranch; Stmt* elseBranch; }; class Stmt::Print: public Stmt { public: Print(Expr* expression): expression(expression) {} void accept(Visitor* visitor) override { visitor->visitPrintStmt(*this); } Expr* expression; }; class Stmt::Return: public Stmt { public: Return(Token keyword, Expr* value): keyword(keyword), value(value) {} void accept(Visitor* visitor) override { visitor->visitReturnStmt(*this); } Token keyword; Expr* value; }; class Stmt::Var: public Stmt { public: Var(Token name, Expr* initializer): name(name), initializer(initializer) {} void accept(Visitor* visitor) override { visitor->visitVarStmt(*this); } Token name; Expr* initializer; }; class Stmt::While: public Stmt { public: While(Expr* condition, Stmt* body): condition(condition), body(body) {} void accept(Visitor* visitor) override { visitor->visitWhileStmt(*this); } Expr* condition; Stmt* body; };
 
 #undef TYPE
 

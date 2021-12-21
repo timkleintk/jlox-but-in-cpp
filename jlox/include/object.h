@@ -2,13 +2,19 @@
 #include <memory>
 #include <string>
 
-#include "loxCallable.h"
+//#include "loxCallable.h"
+//#include "loxClass.h"
+#include "loxInstance.h"
 
+
+class LoxInstance;
+class LoxClass;
+class LoxCallable;
 
 class Object
 {
 public:
-	enum class Type { UNINITIALIZED, BOOL, STRING, NUMBER, NIL, CALLABLE };
+	enum class Type { UNINITIALIZED, BOOL, STRING, NUMBER, NIL, CALLABLE, CLASS, INSTANCE };
 
 	// constructors ------------------------------------------------
 	Object();
@@ -18,8 +24,8 @@ public:
 	Object(std::string value);
 	static Object Nil();
 	Object(std::unique_ptr<LoxCallable>&& value);
-	//Object(std::unique_ptr<LoxCallable>&& callable);
-
+	Object(std::unique_ptr<LoxClass>&& value);
+	Object(std::unique_ptr<LoxInstance>&& value);
 
 	// copy constructor
 	Object(const Object& object);
@@ -40,5 +46,7 @@ public:
 	std::string string;
 	double number = 0;
 	std::unique_ptr<LoxCallable> callable;
+	std::unique_ptr<LoxClass> klass;
+	std::unique_ptr<LoxInstance> instance;
 };
 

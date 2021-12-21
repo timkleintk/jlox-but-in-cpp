@@ -32,6 +32,6 @@ std::ostream& operator<<(std::ostream& os, const Token& token)
 	return os;
 }
 
-Token::Token(const TokenType type, std::string lexeme, Object literal, const int line): type(type), lexeme(std::move(lexeme)), literal(literal), line(line)
+Token::Token(const TokenType type, std::string lexeme, const Object& literal, const int line): type(type), lexeme(std::move(lexeme)), literal(literal), line(line)
 {
 }
