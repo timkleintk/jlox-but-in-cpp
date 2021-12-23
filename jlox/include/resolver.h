@@ -21,7 +21,14 @@ private:
 	{
 		NONE,
 		FUNCTION,
+		INITIALIZER,
 		METHOD
+	};
+
+	enum class ClassType
+	{
+		NONE,
+		CLASS
 	};
 
 	void resolve(Stmt* stmt);
@@ -37,5 +44,6 @@ private:
 	Interpreter& m_interpreter;
 	std::stack<std::unordered_map<std::string, bool>> m_scopes;
 	FunctionType m_currentFunction = FunctionType::NONE;
+	ClassType m_currentClass = ClassType::NONE;
 
 };

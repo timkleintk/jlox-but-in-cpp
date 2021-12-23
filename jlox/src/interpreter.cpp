@@ -167,7 +167,7 @@ void Interpreter::visitCallExpr(Expr::Call& expr, void* returnValue)
 
 void Interpreter::visitGetExpr(Expr::Get& expr, void* returnValue)
 {
-	Object object = evaluate(expr.object);
+	const Object object = evaluate(expr.object);
 	if (object.type == Object::Type::INSTANCE)
 	{
 		RET(object.instance->get(expr.name));
@@ -204,14 +204,19 @@ void Interpreter::visitLogicalExpr(Expr::Logical& expr, void* returnValue)
 }
 void Interpreter::visitSetExpr(Expr::Set& expr, void* returnValue)
 {
-	Object object = evaluate(expr.object);
+	const Object object = evaluate(expr.object);
 
 	if (object.type != Object::Type::INSTANCE)
 	{ throw RuntimeError(expr.name, "Only instances have fields."); }
 
-	Object value = evaluate(expr.value);
+	const Object value = evaluate(expr.value);
 	object.instance->set(expr.name, value);
 	RET(value);
+}
+
+void Interpreter::visitThisExpr(Expr::This& expr, void* returnValue)
+{
+	RET(lookUpVariable(expr.keyword, &expr));
 }
 
 void Interpreter::visitUnaryExpr(Expr::Unary& expr, void* returnValue)
@@ -267,7 +272,7 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 	std::unordered_map<std::string, LoxFunction> methods;
 	for (Stmt::Function& method : stmt.methods)
 	{
-		LoxFunction function(method, m_environment);
+		LoxFunction function(method, m_environment, method.name.lexeme == "init");
 		methods.insert_or_assign(method.name.lexeme, function);
 	}
 
@@ -284,7 +289,7 @@ void Interpreter::visitFunctionStmt(Stmt::Function& stmt)
 	//const LoxFunction function(stmt);
 
 	//m_environment->define(stmt.name.lexeme, std::make_unique<LoxCallable>(function));
-	m_environment->define(stmt.name.lexeme, std::unique_ptr<LoxCallable>(std::make_unique<LoxFunction>(stmt, m_environment)));
+	m_environment->define(stmt.name.lexeme, std::unique_ptr<LoxCallable>(std::make_unique<LoxFunction>(stmt, m_environment, false)));
 }
 
 void Interpreter::visitIfStmt(Stmt::If& stmt)

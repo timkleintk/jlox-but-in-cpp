@@ -55,7 +55,7 @@ inline double ToNumber(const Object& object)
 	{
 		return object.number;
 	}
-	return NAN;
+	return static_cast<double>(NAN);
 
 }
 

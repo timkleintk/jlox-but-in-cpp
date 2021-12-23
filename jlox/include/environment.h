@@ -9,7 +9,7 @@ class Token;
 class Environment
 {
 public:
-	Environment(Environment* enclosing = nullptr);
+	explicit Environment(Environment* enclosing = nullptr);
 	Environment(const Environment&) = delete;
 
 	Environment* enclosing = nullptr;

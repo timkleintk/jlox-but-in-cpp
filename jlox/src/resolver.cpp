@@ -60,6 +60,15 @@ void Resolver::visitSetExpr(Expr::Set& expr, void* )
 	resolve(expr.object);
 }
 
+void Resolver::visitThisExpr(Expr::This& expr, void*)
+{
+	if (m_currentClass == ClassType::NONE)
+	{
+		Lox::Error(expr.keyword, "Can't use 'this' outside of a class.");
+	}
+	
+	resolveLocal(&expr, expr.keyword);
+}
 
 void Resolver::visitUnaryExpr(Expr::Unary& expr, void*)
 {
@@ -88,13 +97,25 @@ void Resolver::visitBlockStmt(Stmt::Block& stmt)
 
 void Resolver::visitClassStmt(Stmt::Class& stmt)
 {
+	ClassType enclosingClass = m_currentClass;
+	m_currentClass = ClassType::CLASS;
+
 	declare(stmt.name);
 	define(stmt.name);
+
+	beginScope();
+	m_scopes.top().insert_or_assign("this", true);
+
 	for (const Stmt::Function& method : stmt.methods)
 	{
-		const FunctionType declaration = FunctionType::METHOD;
+		FunctionType declaration = FunctionType::METHOD;
+		if (method.name.lexeme == "init") { declaration = FunctionType::INITIALIZER; }
 		resolveFunction(method, declaration);
 	}
+
+	endScope();
+
+	m_currentClass = enclosingClass;
 }
 
 void Resolver::visitExpressionStmt(Stmt::Expression& stmt)
@@ -128,7 +149,14 @@ void Resolver::visitReturnStmt(Stmt::Return& stmt)
 	if (m_currentFunction == FunctionType::NONE)
 	{ Lox::Error(stmt.keyword, "Can't return from top-level code."); }
 	if (stmt.value != nullptr)
-	{ resolve(stmt.value); }
+	{
+		if (m_currentFunction == FunctionType::INITIALIZER)
+		{
+			Lox::Error(stmt.keyword, "Can't return a value from an initializer.");
+		}
+
+		resolve(stmt.value);
+	}
 }
 
 void Resolver::visitVarStmt(Stmt::Var& stmt)

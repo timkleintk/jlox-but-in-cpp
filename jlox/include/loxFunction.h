@@ -10,7 +10,8 @@ class LoxFunction final : public LoxCallable
 {
 public:
 	//LoxFunction(const Stmt::Function& declaration, Environment* closure);
-	LoxFunction(const Stmt::Function& declaration, Environment* closure);
+	LoxFunction(Stmt::Function declaration, Environment* closure, bool isInitializer);
+	LoxFunction bind(LoxInstance* instance) const;
 
 	Object call(Interpreter* interpreter, std::vector<Object> arguments) const override;
 	int arity() const override;
@@ -19,11 +20,13 @@ public:
 
 	//LoxFunction& operator=(const LoxFunction&);
 
+
 private:
 	Stmt::Function m_declaration;
 	//std::unique_ptr<Stmt::Function> m_declaration;
 	//std::shared_ptr<Environment> m_closure;
 	Environment* m_closure = nullptr;
+	bool m_isInitializer;
 };
 
 

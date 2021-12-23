@@ -37,7 +37,7 @@ LoxClass::LoxClass(const LoxClass& klass): name(klass.name)
 //}
 
 
-Object LoxClass::findMethod(const std::string& methodName)
+Object LoxClass::findMethod(const std::string& methodName) const
 {
 	if (m_methods.contains(methodName))
 	{ return Object(m_methods.at(methodName)->GetCopy()); } // nts: this returns a copy, not a reference
@@ -61,12 +61,23 @@ std::string LoxClass::toString() const
 	return name;
 }
 
-Object LoxClass::call(Interpreter*, std::vector<Object> arguments) const
+Object LoxClass::call(Interpreter* interpreter, std::vector<Object> arguments) const
 {
-	return Object(std::make_unique<LoxInstance>(*this));
+	auto instance = std::make_unique<LoxInstance>(*this);
+
+	if (const auto initializer = findMethod("init"); initializer.type != Object::Type::NIL)
+	{
+		dynamic_cast<LoxFunction*>(initializer.callable.get())->bind(instance.get()).call(interpreter, arguments);
+	}
+
+	return Object(std::move(instance));
 }
 
 int LoxClass::arity() const
 {
+	if (const auto initializer = findMethod("init"); initializer.type != Object::Type::NIL)
+	{
+		return initializer.callable->arity();
+	}
 	return 0;
 }

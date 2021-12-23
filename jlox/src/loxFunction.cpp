@@ -1,12 +1,21 @@
 #include "loxFunction.h"
 
+#include <utility>
+
 #include "environment.h"
 #include "interpreter.h"
 #include "return.h"
 
 //LoxFunction::LoxFunction(const Stmt::Function& declaration, Environment* closure): m_declaration(std::make_unique<Stmt::Function>(declaration)), m_closure(closure)
-LoxFunction::LoxFunction(const Stmt::Function& declaration, Environment* closure): m_declaration(declaration), m_closure(closure)
+LoxFunction::LoxFunction(Stmt::Function declaration, Environment* closure, bool isInitializer): m_declaration(std::move(declaration)), m_closure(closure), m_isInitializer(isInitializer)
 {}
+
+LoxFunction LoxFunction::bind(LoxInstance* instance) const
+{
+	auto* environment = new Environment(m_closure);
+	environment->define("this", instance); // BUG: this casts LoxInstance* to bool, resulting in Object(true); instead of Object(instance);
+	return LoxFunction(m_declaration, environment, m_isInitializer);
+}
 
 Object LoxFunction::call(Interpreter* interpreter, const std::vector<Object> arguments) const
 {
@@ -28,10 +37,13 @@ Object LoxFunction::call(Interpreter* interpreter, const std::vector<Object> arg
 	}
 	catch (Return& r)
 	{
+		if (m_isInitializer)
+		{
+			return m_closure->getAt(0, "this");
+		}
 		return r.value;
 	}
 
-	// nts: this is not really expressive
 	return Object::Nil();
 }
 
@@ -50,8 +62,9 @@ std::unique_ptr<LoxCallable> LoxFunction::GetCopy()
 {
 	// nts: is this correct?
 	//return std::make_unique<LoxFunction>(*m_declaration, m_closure);
-	return std::make_unique<LoxFunction>(m_declaration, m_closure);
+	return std::make_unique<LoxFunction>(m_declaration, m_closure, m_isInitializer);
 }
+
 
 //LoxFunction& LoxFunction::operator=(const LoxFunction& other)
 //{

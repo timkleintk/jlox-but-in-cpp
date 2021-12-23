@@ -3,6 +3,7 @@
 #include "loxCallable.h"
 #include "loxClass.h"
 #include "loxInstance.h"
+#include <environment.h>
 
 Object::Object(): type(Type::UNINITIALIZED)
 {}
@@ -106,3 +107,12 @@ bool Object::equals(const Object& other) const
 	}
 	return false;
 }
+
+//Object& Object::bind(LoxInstance* loxInstance)
+//{
+//	assert(type == Type::CALLABLE);
+//
+//	LoxFunction method = klass->findMethod(name.lexeme)
+//
+//	return dynamic_cast<LoxFunction*>(callable.get())->bind(loxInstance);
+//}

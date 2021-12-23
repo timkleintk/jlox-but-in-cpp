@@ -18,7 +18,7 @@ public:
 	LoxClass& operator=(const LoxClass& klass) = delete;
 
 
-	Object findMethod(const std::string& methodName);
+	Object findMethod(const std::string& methodName) const;
 
 	std::string name;
 

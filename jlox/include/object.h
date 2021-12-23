@@ -39,6 +39,10 @@ public:
 	std::string AsString() const;
 
 	bool equals(const Object& other) const;
+
+	// for the loxfunction
+	//Object& bind(LoxInstance* loxInstance);
+
 	Type type;
 
 	// TODO: make this a union?
