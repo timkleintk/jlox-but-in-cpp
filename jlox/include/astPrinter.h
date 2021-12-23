@@ -1,3 +1,4 @@
+/*
 #pragma once
 #include <cassert>
 #include <cstdarg>
@@ -5,7 +6,6 @@
 #include <string>
 
 #include "expr.h"
-
 
 
 class AstPrinter : public Expr::Visitor
@@ -49,24 +49,6 @@ public:
 	std::string parenthesize(const std::string& name, Expr* e0, Expr* e1) { return parenthesize(name, 2, e0, e1); }
 	std::string parenthesize(const std::string& name, Expr* e0, Expr* e1, Expr* e2) { return parenthesize(name, 3, e0, e1, e2); }
 
-	void Test()
-	{
-		// nts: MASSIVE MEMORY LEAK
-		auto expression =
-			Expr::Binary(
-				new Expr::Unary(
-					Token(MINUS, "-", Object(), 1),
-					new Expr::Literal(Object(static_cast<double>(123)))
-				),
-				Token(STAR, "*", {}, 1),
-				new Expr::Grouping(
-					new Expr::Literal(Object(45.67))
-				)
-			);
-
-		std::cout << print(&expression);
-	}
-
 	// we need to implement all visit methods
 #define RETURN *static_cast<std::string*>(returnValue) =
 	void visitBinaryExpr(Expr::Binary& expr, void* returnValue) override
@@ -90,3 +72,4 @@ public:
 	}
 
 };
+*/

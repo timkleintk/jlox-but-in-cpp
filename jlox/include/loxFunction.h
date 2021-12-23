@@ -4,6 +4,7 @@
 
 #include "expr.h"
 
+class LoxInstance;
 class Environment;
 
 class LoxFunction final : public LoxCallable
@@ -13,10 +14,11 @@ public:
 	LoxFunction(Stmt::Function declaration, Environment* closure, bool isInitializer);
 	LoxFunction bind(LoxInstance* instance) const;
 
-	Object call(Interpreter* interpreter, std::vector<Object> arguments) const override;
+	std::any call(Interpreter* interpreter, std::vector<std::any> arguments) const override;
 	int arity() const override;
-	std::string toString() override;
-	std::unique_ptr<LoxCallable> GetCopy() override;
+
+	//std::string toString() override;
+	//std::unique_ptr<LoxCallable> GetCopy() override;
 
 	//LoxFunction& operator=(const LoxFunction&);
 

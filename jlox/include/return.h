@@ -1,9 +1,9 @@
 #pragma once
-#include "object.h"
+#include <any>
 
 class Return final : public std::exception
 {
 public:
-	Return(const Object& value):value(value) {}
-	Object value;
+	Return(const std::any& value):value(value) {}
+	std::any value;
 };

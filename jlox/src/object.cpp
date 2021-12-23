@@ -1,3 +1,5 @@
+/*
+
 #include "object.h"
 
 #include "loxCallable.h"
@@ -116,3 +118,5 @@ bool Object::equals(const Object& other) const
 //
 //	return dynamic_cast<LoxFunction*>(callable.get())->bind(loxInstance);
 //}
+
+*/

@@ -1,7 +1,6 @@
 #pragma once
-
-#include "object.h"
-
+#include <any>
+#include <string>
 
 enum TokenType
 {
@@ -28,14 +27,12 @@ enum TokenType
 class Token
 {
 public:
-	//Token(TokenType type, std::string lexeme, StrNum literal, int line);
-	Token(TokenType type, std::string lexeme, const Object& literal, int line);
-	
+	Token(TokenType type, std::string lexeme, const std::any& literal, int line);
 
 	TokenType type;
 	std::string lexeme;
-	Object literal;
+	std::any literal;
 	int line;
 };
 
-std::ostream& operator<<(std::ostream& os, const Token& token);
+//std::ostream& operator<<(std::ostream& os, const Token& token);

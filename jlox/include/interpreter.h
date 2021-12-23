@@ -1,9 +1,4 @@
 #pragma once
-
-#include <deque>
-#include <string>
-#include <vector>
-
 #include "environment.h"
 #include "expr.h"
 
@@ -24,7 +19,7 @@ public:
 #undef TYPE
 
 	void resolve(const Expr* expr, int depth);
-	Object lookUpVariable(const Token& name, const Expr* expr);
+	std::any lookUpVariable(const Token& name, const Expr* expr);
 
 	Environment globals;
 	std::unordered_map<const Expr*, int> locals;
@@ -34,50 +29,55 @@ private:
 
 	Environment* m_environment = nullptr;
 
-	void checkNumberOperand(const Token& op, const Object& operand);
-	void checkNumberOperands(const Token& op, const Object& left, const Object& right);
+	//void checkNumberOperand(const Token& op, const std::any& operand);
+	//void checkNumberOperands(const Token& op, const std::any& left, const std::any& right);
 
-	Object evaluate(Expr* expr);
+	std::any evaluate(Expr* expr);
 
 	void execute(Stmt* stmt);
 
 };
 
+template<typename T>
+bool is(const std::any& any)
+{ return std::any_cast<T>(&any) != nullptr; }
 
+// basically a wrapper for any_cast
+template<typename T>
+T as(const std::any& any) { return std::any_cast<T>(any); }
 
-inline bool IsNumber(const Object& object)
-{
-	return object.type == Object::Type::NUMBER;
-}
-inline double ToNumber(const Object& object)
-{
-	if (object.type == Object::Type::NUMBER)
-	{
-		return object.number;
-	}
-	return static_cast<double>(NAN);
+/*
+  private boolean isTruthy(Object object) {
+	if (object == null) return false;
+	if (object instanceof Boolean) return (boolean)object;
+	return true;
+  }
+*/
 
-}
-
-inline bool IsString(const Object& object)
+inline bool IsTruthy(const std::any& object)
 {
-	return object.type == Object::Type::STRING;
-}
-inline const std::string& ToString(const Object& object) // nts: returntype?
-{
-	return object.string;
-}
-
-inline bool IsTruthy(const Object& object)
-{
-	if (object.type == Object::Type::NIL) { return false; }
-	if (object.type == Object::Type::BOOL) { return object.boolean; }
+	if (!object.has_value()) return false;
+	if (is<bool>(object)) return as<bool>(object);
 	return true;
 }
-inline bool IsEqual(const Object& left, const Object& right)
+
+/*
+  private boolean isEqual(Object a, Object b) {
+	if (a == null && b == null) return true;
+	if (a == null) return false;
+
+	return a.equals(b);
+  }
+*/
+template<typename T>
+inline bool IsEqual(const std::any& a, const std::any& b)
 {
-	// if (left.isNull() && right.isN
-	return left.equals(right);
+	if (!a.has_value() && !b.has_value()) { return true; }
+	if (!a.has_value()) { return false; }
+	if (a.type() != b.type()) { return false; }
+	if (is<T>(a)) { return as<T>(a) == as<T>(b); }
+
+	return false;
 }
 
 

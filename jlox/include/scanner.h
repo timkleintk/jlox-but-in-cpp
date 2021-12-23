@@ -1,9 +1,9 @@
 #pragma once
 
+
 #include <string>
 #include <vector>
 
-#include "token.h"
 
-
+class Token;
 std::vector<Token> ScanTokens(const std::string& source);

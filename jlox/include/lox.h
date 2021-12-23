@@ -1,8 +1,5 @@
 #pragma once
 
-
-#include <string>
-
 #include "interpreter.h"
 
 class RuntimeError;
@@ -22,10 +19,10 @@ public:
 	static void runtimeError(const RuntimeError& error);
 
 private:
-	static Interpreter interpreter;
+	static Interpreter m_interpreter;
 
-	static bool hadError;
-	static bool hadRuntimeError;
+	static bool m_hadError;
+	static bool m_hadRuntimeError;
 
 	static void Run(const std::string& source);
 

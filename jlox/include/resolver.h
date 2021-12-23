@@ -1,12 +1,15 @@
 #pragma once
 #include <stack>
+#include <unordered_map>
 
 #include "expr.h"
+
+class Interpreter;
 
 class Resolver final : public Stmt::Visitor, public Expr::Visitor
 {
 public:
-	Resolver(Interpreter& interpreter);
+	explicit Resolver(Interpreter& interpreter);
 	void resolve(const std::vector<Stmt*>& stmts);
 
 #define TYPE(name, ...) void visit ## name ## Expr(Expr::name& expr, void* returnValue) override;

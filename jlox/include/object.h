@@ -1,3 +1,4 @@
+/*
 #pragma once
 #include <memory>
 #include <string>
@@ -54,3 +55,4 @@ public:
 	std::unique_ptr<LoxInstance> instance;
 };
 
+*/
