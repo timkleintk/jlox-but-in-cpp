@@ -13,19 +13,21 @@ void Resolver::resolve(const std::vector<Stmt*>& stmts)
 	}
 }
 
-void Resolver::visitAssignExpr(Expr::Assign& expr, void*)
+object_t Resolver::visitAssignExpr(Expr::Assign& expr)
 {
 	resolve(expr.value);
 	resolveLocal(&expr, expr.name);
+	return {};
 }
 
-void Resolver::visitBinaryExpr(Expr::Binary& expr, void*)
+object_t Resolver::visitBinaryExpr(Expr::Binary& expr)
 {
 	resolve(expr.left);
 	resolve(expr.right);
+	return {};
 }
 
-void Resolver::visitCallExpr(Expr::Call& expr, void*)
+object_t Resolver::visitCallExpr(Expr::Call& expr)
 {
 	resolve(expr.callee);
 
@@ -33,59 +35,83 @@ void Resolver::visitCallExpr(Expr::Call& expr, void*)
 	{
 		resolve(argument);
 	}
+	return {};
 }
 
-void Resolver::visitGetExpr(Expr::Get& expr, void* )
+object_t Resolver::visitGetExpr(Expr::Get& expr)
 {
 	resolve(expr.object);
+	return {};
 }
 
-void Resolver::visitGroupingExpr(Expr::Grouping& expr, void*)
+object_t Resolver::visitGroupingExpr(Expr::Grouping& expr)
 {
 	resolve(expr.expression);
+	return {};
 }
 
-void Resolver::visitLiteralExpr(Expr::Literal&, void*)
-{}
+object_t Resolver::visitLiteralExpr(Expr::Literal&)
+{
+	return {};
+}
 
-void Resolver::visitLogicalExpr(Expr::Logical& expr, void*)
+object_t Resolver::visitLogicalExpr(Expr::Logical& expr)
 {
 	resolve(expr.left);
 	resolve(expr.right);
+	return {};
 }
 
-void Resolver::visitSetExpr(Expr::Set& expr, void* )
+object_t Resolver::visitSetExpr(Expr::Set& expr)
 {
 	resolve(expr.value);
 	resolve(expr.object);
+	return {};
 }
 
-void Resolver::visitThisExpr(Expr::This& expr, void*)
+object_t Resolver::visitSuperExpr(Expr::Super& expr)
+{
+	if (m_currentClass == ClassType::NONE)
+	{
+		Lox::Error(expr.keyword, "Can't use 'super' outside of a class.");
+	}
+	else if (m_currentClass != ClassType::SUBCLASS)
+	{
+		Lox::Error(expr.keyword, "Can't use 'super' in a class with no superclass.");
+	}
+
+	resolveLocal(&expr, expr.keyword);
+	return {};
+}
+
+object_t Resolver::visitThisExpr(Expr::This& expr)
 {
 	if (m_currentClass == ClassType::NONE)
 	{
 		Lox::Error(expr.keyword, "Can't use 'this' outside of a class.");
 	}
-	
+
 	resolveLocal(&expr, expr.keyword);
+	return {};
 }
 
-void Resolver::visitUnaryExpr(Expr::Unary& expr, void*)
+object_t Resolver::visitUnaryExpr(Expr::Unary& expr)
 {
 	resolve(expr.right);
+	return {};
 }
 
-void Resolver::visitVariableExpr(Expr::Variable& expr, void*)
+object_t Resolver::visitVariableExpr(Expr::Variable& expr)
 {
-	if (!m_scopes.empty() && 
-		m_scopes.top().contains(expr.name.lexeme) && 
+	if (!m_scopes.empty() &&
+		m_scopes.top().contains(expr.name.lexeme) &&
 		m_scopes.top().at(expr.name.lexeme) == false)
 	{
-		// nts: change to something like "illegal use of undefined variable
 		Lox::Error(expr.name, "Can't read local variable in its own initializer.");
 	}
 
 	resolveLocal(&expr, expr.name);
+	return {};
 }
 
 void Resolver::visitBlockStmt(Stmt::Block& stmt)
@@ -103,6 +129,22 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 	declare(stmt.name);
 	define(stmt.name);
 
+	if (stmt.superclass != nullptr)
+	{
+		m_currentClass = ClassType::SUBCLASS;
+		if (stmt.name.lexeme == stmt.superclass->name.lexeme)
+		{
+			Lox::Error(stmt.superclass->name, "A class can't inherit from itself.");
+		}
+		else
+		{
+			resolve(stmt.superclass);
+
+			beginScope();
+			m_scopes.top().insert_or_assign("super", true);
+		}
+	}
+
 	beginScope();
 	m_scopes.top().insert_or_assign("this", true);
 
@@ -114,6 +156,8 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 	}
 
 	endScope();
+
+	if (stmt.superclass != nullptr) { endScope(); }
 
 	m_currentClass = enclosingClass;
 }
@@ -175,16 +219,9 @@ void Resolver::visitWhileStmt(Stmt::While& stmt)
 	resolve(stmt.body);
 }
 
-// nts: can this be moved to the visitor base class?
-void Resolver::resolve(Stmt* stmt)
-{
-	stmt->accept(this);
-}
+void Resolver::resolve(Stmt* stmt) { stmt->accept(this); }
 
-void Resolver::resolve(Expr* expr)
-{
-	expr->accept(this, nullptr);
-}
+void Resolver::resolve(Expr* expr) { expr->accept(this); }
 
 void Resolver::resolveFunction(const Stmt::Function& function, const FunctionType type)
 {
@@ -204,8 +241,7 @@ void Resolver::resolveFunction(const Stmt::Function& function, const FunctionTyp
 
 void Resolver::beginScope()
 {
-	//m_scopes.emplace();
-	m_scopes.push(std::unordered_map<std::string, bool>());
+	m_scopes.emplace();
 }
 
 void Resolver::endScope()
@@ -226,14 +262,13 @@ void Resolver::declare(const Token& name)
 void Resolver::define(const Token& name)
 {
 	if (m_scopes.empty()) return;
-	//m_scopes.top().insert_or_assign(name.lexeme, true);
-	m_scopes.top().at(name.lexeme) = true;
-	//m_scopes.top().insert({name.lexeme, true});
+	//m_scopes.top().at(name.lexeme) = true;
+	// I chose insert_or_assign, because it is closer to java's put
+	m_scopes.top().insert_or_assign(name.lexeme, true);
 }
 
-void Resolver::resolveLocal(Expr* expr, const Token& name) const
+void Resolver::resolveLocal(const Expr* expr, const Token& name) const
 {
-	// nts: look at the types in this for loop
 	for (int i = static_cast<int>(m_scopes.size()) - 1; i >= 0; i--)
 	{
 		if (m_scopes._Get_container()[i].contains(name.lexeme))

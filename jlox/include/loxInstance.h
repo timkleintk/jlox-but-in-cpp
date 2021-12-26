@@ -9,15 +9,11 @@ class LoxInstance
 public:
 	LoxInstance(const LoxClass& klass);
 
-	std::any get(const Token& name);
-	void set(const Token& name, const std::any& value);
+	object_t get(const Token& name);
+	void set(const Token& name, const object_t& value);
 
-	//std::string toString()
-	//{
-	//	return m_class.toString() + " instance";
-	//}
-	
+	const LoxClass& getClass() { return m_class; }
 private:
 	LoxClass m_class;
-	std::unordered_map<std::string, std::any> m_fields;
+	std::unordered_map<std::string, object_t> m_fields;
 };

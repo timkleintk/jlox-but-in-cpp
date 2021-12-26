@@ -18,16 +18,10 @@
     <ClCompile Include="src\environment.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\expr.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\interpreter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\lox.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\loxCallable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\loxClass.cpp">

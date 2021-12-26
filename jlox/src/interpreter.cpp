@@ -1,34 +1,30 @@
 #include "interpreter.h"
 
-#include <any>
 #include <cassert>
 #include <chrono>
 #include <iostream>
-#include <vector>
 
 #include "lox.h"
-#include "loxCallable.h"
 #include "loxClass.h"
 #include "loxFunction.h"
+#include "loxInstance.h"
 #include "return.h"
 #include "RuntimeError.h"
 
 
-Interpreter::Interpreter()
+class ClockFunction final : public LoxCallable
 {
-	//m_environment = new Environment(&globals);
-	m_environment = &globals;
-
-	globals.define("clock", Object(
-		std::make_unique<LoxCallable>(
-			[](Interpreter*, const std::vector<Object>&) -> Object
+public:
+	object_t call(Interpreter*, std::vector<object_t>) const override
 	{
 		return static_cast<double>(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-	},
-			0
-		)
-	));
+	}
+	[[nodiscard]] int arity() const override { return 0; }
+};
 
+Interpreter::Interpreter(): m_environment(&globals)
+{
+	globals.define("clock", object_t(static_cast<LoxCallable*>(new ClockFunction())));
 }
 
 Interpreter::~Interpreter()
@@ -36,11 +32,9 @@ Interpreter::~Interpreter()
 	assert(m_environment == &globals);
 }
 
-Object Interpreter::evaluate(Expr* expr)
+object_t Interpreter::evaluate(Expr* expr)
 {
-	Object result;
-	expr->accept(this, &result);
-	return result;
+	return expr->accept(this);
 }
 
 void Interpreter::execute(Stmt* stmt)
@@ -48,13 +42,9 @@ void Interpreter::execute(Stmt* stmt)
 	stmt->accept(this);
 }
 
-//void Interpreter::executeBlock(const std::vector<Stmt*>& stmts, const std::shared_ptr<Environment> environment)
 void Interpreter::executeBlock(const std::vector<Stmt*>& stmts, Environment* environment)
 {
 	Environment* previous = m_environment;
-
-	// make a new scope
-	//m_environment = environment.get();
 	m_environment = environment;
 
 	try
@@ -89,162 +79,188 @@ void Interpreter::interpret(const std::vector<Stmt*>& statements)
 	}
 }
 
+// helper functions
+void checkNumberOperand(const Token& op, const object_t& operand)
+{ if (!is<double>(operand)) { throw RuntimeError(op, "Operand must be a number."); } }
+
+void checkNumberOperands(const Token& op, const object_t& left, const object_t& right)
+{ if (!is<double>(left) || !is<double>(right)) { throw RuntimeError(op, "Operands must be numbers."); } }
 
 // Expressions
-#define RET(value) *static_cast<Object*>(returnValue) = Object(value); return
-void Interpreter::visitBinaryExpr(Expr::Binary& expr, void* returnValue)
+object_t Interpreter::visitBinaryExpr(Expr::Binary& expr)
 {
-	const Object left = evaluate(expr.left);
-	const Object right = evaluate(expr.right);
+	const auto left = evaluate(expr.left);
+	const auto right = evaluate(expr.right);
 
 	switch (expr.op.type)
 	{
 		// comparisons
 	case GREATER:
 		checkNumberOperands(expr.op, left, right);
-		RET(ToNumber(left) > ToNumber(right));
+		return as<double>(left) > as<double>(right);
 	case GREATER_EQUAL:
 		checkNumberOperands(expr.op, left, right);
-		RET(ToNumber(left) >= ToNumber(right));
+		return as<double>(left) >= as<double>(right);
 	case LESS:
 		checkNumberOperands(expr.op, left, right);
-		RET(ToNumber(left) < ToNumber(right));
+		return as<double>(left) < as<double>(right);
 	case LESS_EQUAL:
 		checkNumberOperands(expr.op, left, right);
-		RET(ToNumber(left) <= ToNumber(right));
+		return as<double>(left) <= as<double>(right);
 	case BANG_EQUAL:
 		checkNumberOperands(expr.op, left, right);
-		RET(!IsEqual(left, right));
+		return!IsEqual(left, right);
 	case EQUAL_EQUAL:
 		checkNumberOperands(expr.op, left, right);
-		RET(IsEqual(left, right));
+		return IsEqual(left, right);
 
 		// arithmetic
 	case MINUS:
 		checkNumberOperands(expr.op, left, right);
-		RET(ToNumber(left) - ToNumber(right));
+		return as<double>(left) - as<double>(right);
 	case PLUS:
-		if (IsNumber(left) && IsNumber(right))
-		{ RET(ToNumber(left) + ToNumber(right)); }
-		if (IsString(left) && IsString(right))
-		{ RET(ToString(left) + ToString(right)); }
+		if (is<double>(left) && is<double>(right))
+		{ return as<double>(left) + as<double>(right); }
+		if (is<std::string>(left) && is<std::string>(right))
+		{ return as<std::string>(left) + as<std::string>(right); }
 		throw RuntimeError(expr.op, "Operands must be two numbers or two strings.");
 	case SLASH:
 		checkNumberOperands(expr.op, left, right);
-		RET(ToNumber(left) / ToNumber(right));
+		return as<double>(left) / as<double>(right);
 	case STAR:
 		checkNumberOperands(expr.op, left, right);
-		RET(ToNumber(left) * ToNumber(right));
+		return as<double>(left) * as<double>(right);
+	default:
+		throw RuntimeError(expr.op, "Unknown binary operator.");
 	}
-
-	__debugbreak();
 }
 
-void Interpreter::visitCallExpr(Expr::Call& expr, void* returnValue)
+object_t Interpreter::visitCallExpr(Expr::Call& expr)
 {
-	const Object callee = evaluate(expr.callee);
+	const object_t callee = evaluate(expr.callee);
 
-	std::vector<Object> arguments;
+	std::vector<object_t> arguments;
 	for (const auto& arg : expr.arguments)
 	{
 		arguments.push_back(evaluate(arg));
 	}
 
-	if (!(callee.type == Object::Type::CALLABLE || callee.type == Object::Type::CLASS))
+	LoxCallable* callable = nullptr;
+	// nts: make this more robust
+	if (is<LoxCallable*>(callee)) { callable = as<LoxCallable*>(callee); }
+	//else if (is<LoxFunction*>(callee)) { callable = as<LoxFunction*>(callee); }
+	else if (is<LoxClass*>(callee)) { callable = as<LoxClass*>(callee); }
+												// nts: leak
+	else if (is<LoxFunction>(callee)) { callable = new LoxFunction(as<LoxFunction>(callee)); }
+
+	if (callable == nullptr)
+	{ throw RuntimeError(expr.paren, "Can only call functions and classes."); }
+
+	if (static_cast<int>(arguments.size()) != callable->arity())
 	{
-		throw RuntimeError(std::move(expr.paren), "Can only call functions and classes.");
+		throw RuntimeError(std::move(expr.paren), "Expected " + std::to_string(callable->arity()) + " arguments but got " + std::to_string(arguments.size()) + ".");
 	}
 
-	const LoxCallable* function = callee.type == Object::Type::CALLABLE ? callee.callable.get() : callee.klass.get();
-
-	if (arguments.size() != function->arity())
-	{
-		throw RuntimeError(std::move(expr.paren), "Expected " + std::to_string(function->arity()) + " arguments but got " + std::to_string(arguments.size()) + ".");
-	}
-
-	RET(function->call(this, arguments));
+	return callable->call(this, std::move(arguments));
 }
 
-void Interpreter::visitGetExpr(Expr::Get& expr, void* returnValue)
+object_t Interpreter::visitGetExpr(Expr::Get& expr)
 {
-	const Object object = evaluate(expr.object);
-	if (object.type == Object::Type::INSTANCE)
+	const object_t object = evaluate(expr.object);
+	if (is<LoxInstance*>(object))
 	{
-		RET(object.instance->get(expr.name));
+		return as<LoxInstance*>(object)->get(expr.name);
 	}
 
 	throw RuntimeError(expr.name, "Only instances have properties.");
 }
 
-void Interpreter::visitGroupingExpr(Expr::Grouping& expr, void* returnValue)
+object_t Interpreter::visitGroupingExpr(Expr::Grouping& expr)
 {
-	RET(evaluate(expr.expression));
-}
-void Interpreter::visitLiteralExpr(Expr::Literal& expr, void* returnValue)
-{
-	RET(expr.value);
+	return evaluate(expr.expression);
 }
 
-void Interpreter::visitLogicalExpr(Expr::Logical& expr, void* returnValue)
+object_t Interpreter::visitLiteralExpr(Expr::Literal& expr)
 {
-	const Object left = evaluate(expr.left);
+	return expr.value;
+}
+
+object_t Interpreter::visitLogicalExpr(Expr::Logical& expr)
+{
+	object_t left = evaluate(expr.left);
 
 	if (expr.op.type == OR)
 	{
 		// OR
-		if (IsTruthy(left)) { RET(left); }
+		if (IsTruthy(left)) { return left; }
 	}
 	else
 	{
 		// AND
-		if (!IsTruthy(left)) { RET(left); }
+		if (!IsTruthy(left)) { return left; }
 	}
 
-	RET(evaluate(expr.right));
+	return evaluate(expr.right);
 }
-void Interpreter::visitSetExpr(Expr::Set& expr, void* returnValue)
-{
-	const Object object = evaluate(expr.object);
 
-	if (object.type != Object::Type::INSTANCE)
+object_t Interpreter::visitSetExpr(Expr::Set& expr)
+{
+	const object_t object = evaluate(expr.object);
+
+	if (!is<LoxInstance*>(object))
 	{ throw RuntimeError(expr.name, "Only instances have fields."); }
 
-	const Object value = evaluate(expr.value);
-	object.instance->set(expr.name, value);
-	RET(value);
+	object_t value = evaluate(expr.value);
+	as<LoxInstance*>(object)->set(expr.name, value);
+	return value;
 }
 
-void Interpreter::visitThisExpr(Expr::This& expr, void* returnValue)
+object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 {
-	RET(lookUpVariable(expr.keyword, &expr));
+	const int distance = locals.at(&expr);
+	LoxClass* superclass = as<LoxClass*>(m_environment->getAt(distance, "super"));
+
+	LoxInstance* object = as<LoxInstance*>(m_environment->getAt(distance - 1, "this"));
+
+	LoxFunction method = as<LoxFunction>(superclass->findMethod(expr.method.lexeme));
+	if (isNull(method))
+	{
+		throw RuntimeError(expr.method, "Undefined property '" + expr.method.lexeme + "'.");
+	}
+	return method.bind(object);
 }
 
-void Interpreter::visitUnaryExpr(Expr::Unary& expr, void* returnValue)
+object_t Interpreter::visitThisExpr(Expr::This& expr)
 {
-	const Object right = evaluate(expr.right);
+	return lookUpVariable(expr.keyword, &expr);
+}
+
+object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
+{
+	const object_t right = evaluate(expr.right);
 	switch (expr.op.type)
 	{
 	case MINUS:
 		checkNumberOperand(expr.op, right);
-		RET(-ToNumber(right));
+		return -as<double>(right);
 	case BANG:
-		RET(!IsTruthy(right));
+		return !IsTruthy(right);
+	default: return {};
 	}
 
-	__debugbreak(); // returning null is not really a thing
-	//returnValue = nullptr;
-	//RET( LiteralValue::Nil();
 }
-void Interpreter::visitVariableExpr(Expr::Variable& expr, void* returnValue)
-{
-	RET(lookUpVariable(expr.name, &expr));
-	//RET(m_environment->get(expr.name));
-}
-void Interpreter::visitAssignExpr(Expr::Assign& expr, void* returnValue)
-{
-	const Object value = evaluate(expr.value);
 
-	if (const auto it = locals.find(&expr); it != locals.end())
+object_t Interpreter::visitVariableExpr(Expr::Variable& expr)
+{
+	return lookUpVariable(expr.name, &expr);
+}
+
+object_t Interpreter::visitAssignExpr(Expr::Assign& expr)
+{
+	object_t value = evaluate(expr.value);
+
+	const auto it = locals.find(&expr);
+	if (it != locals.end())
 	{
 		m_environment->assignAt(it->second, expr.name, value);
 	}
@@ -253,21 +269,36 @@ void Interpreter::visitAssignExpr(Expr::Assign& expr, void* returnValue)
 		globals.assign(expr.name, value);
 	}
 
-	//m_environment->assign(expr.name, value);
-	RET(value);
+	return value;
 }
-#undef RET
 
 // Statements
 void Interpreter::visitBlockStmt(Stmt::Block& stmt)
 {
-	//executeBlock(stmt.statements, std::make_unique<Environment>(m_environment));
 	executeBlock(stmt.statements, new Environment(m_environment));
 }
 
 void Interpreter::visitClassStmt(Stmt::Class& stmt)
 {
-	m_environment->define(stmt.name.lexeme, Object::Nil());
+	LoxClass* superclass = nullptr;
+
+	if (stmt.superclass != nullptr)
+	{
+		const object_t lc = evaluate(stmt.superclass);
+		if (!is<LoxClass*>(lc))
+		{
+			throw RuntimeError(stmt.superclass->name, "Superclass must be a class."); 
+		}
+		superclass = as<LoxClass*>(lc);
+	}
+
+	m_environment->define(stmt.name.lexeme, {});
+
+	if (stmt.superclass != nullptr)
+	{
+		m_environment = new Environment(m_environment);
+		m_environment->define("super", superclass);
+	}
 
 	std::unordered_map<std::string, LoxFunction> methods;
 	for (Stmt::Function& method : stmt.methods)
@@ -276,7 +307,14 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 		methods.insert_or_assign(method.name.lexeme, function);
 	}
 
-	m_environment->assign(stmt.name, Object(std::make_unique<LoxClass>(stmt.name.lexeme, methods)));
+	if (superclass != nullptr)
+	{
+		// nts free the created environment?
+		m_environment = m_environment->getEnclosing();
+	}
+
+	// nts: leak
+	m_environment->assign(stmt.name, object_t(new LoxClass(stmt.name.lexeme, superclass, methods)));
 }
 
 void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
@@ -286,10 +324,8 @@ void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
 
 void Interpreter::visitFunctionStmt(Stmt::Function& stmt)
 {
-	//const LoxFunction function(stmt);
-
-	//m_environment->define(stmt.name.lexeme, std::make_unique<LoxCallable>(function));
-	m_environment->define(stmt.name.lexeme, std::unique_ptr<LoxCallable>(std::make_unique<LoxFunction>(stmt, m_environment, false)));
+	// nts: leak
+	m_environment->define(stmt.name.lexeme, object_t(static_cast<LoxCallable*>(new LoxFunction(stmt, m_environment, false))));
 }
 
 void Interpreter::visitIfStmt(Stmt::If& stmt)
@@ -306,13 +342,13 @@ void Interpreter::visitIfStmt(Stmt::If& stmt)
 
 void Interpreter::visitPrintStmt(Stmt::Print& stmt)
 {
-	const Object value = evaluate(stmt.expression);
-	std::cout << value.AsString() << std::endl;
+	const object_t value = evaluate(stmt.expression);
+	std::cout << toString(value) << std::endl;
 }
 
 void Interpreter::visitReturnStmt(Stmt::Return& stmt)
 {
-	Object value = Object::Nil();
+	object_t value = {};
 	if (stmt.value != nullptr) { value = evaluate(stmt.value); }
 
 	throw Return(value);
@@ -320,7 +356,7 @@ void Interpreter::visitReturnStmt(Stmt::Return& stmt)
 
 void Interpreter::visitVarStmt(Stmt::Var& stmt)
 {
-	Object value = Object::Nil();
+	object_t value = {};
 	if (stmt.initializer != nullptr)
 	{
 		value = evaluate(stmt.initializer);
@@ -341,21 +377,9 @@ void Interpreter::resolve(const Expr* expr, int depth)
 	locals.insert_or_assign(expr, depth);
 }
 
-Object Interpreter::lookUpVariable(const Token& name, const Expr* expr)
+object_t Interpreter::lookUpVariable(const Token& name, const Expr* expr)
 {
 	if (const auto it = locals.find(expr); it != locals.end())
 	{ return m_environment->getAt(it->second, name.lexeme); }
 	return globals.get(name);
-}
-
-void Interpreter::checkNumberOperand(const Token& op, const Object& operand)
-{
-	if (operand.type == Object::Type::NUMBER) return;
-	throw RuntimeError(op, "Operand must be a number.");
-}
-
-void Interpreter::checkNumberOperands(const Token& op, const Object& left, const Object& right)
-{
-	if (IsNumber(left) && IsNumber(right)) return;
-	throw(RuntimeError(op, "Operands must be numbers."));
 }

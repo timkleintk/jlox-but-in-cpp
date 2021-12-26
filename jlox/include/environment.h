@@ -1,7 +1,8 @@
 #pragma once
-#include <any>
 #include <string>
 #include <unordered_map>
+
+#include "object.h"
 
 
 class Token;
@@ -10,26 +11,25 @@ class Environment
 {
 public:
 	explicit Environment(Environment* enclosing = nullptr);
-	Environment(const Environment&) = delete;
-	~Environment() = default;
-
-	Environment* enclosing = nullptr;
 
 
-	std::any get(const Token& name);
+	object_t get(const Token& name);
 
-	void define(const std::string& name, const std::any& value);
+	void define(const std::string& name, const object_t& value);
 
-	Environment& ancestor(const int distance);
+	object_t getAt(int distance, const std::string& name);
 
-	std::any getAt(const int distance, const std::string& name);
+	void assignAt(int distance, const Token& name, const object_t& value);
 
-	void assignAt(const int distance, const Token& name, const std::any& value);
+	void assign(const Token& name, const object_t& value);
 
-	void assign(const Token& name, const std::any& value);
+	Environment* getEnclosing() const { return m_enclosing; }
 
 private:
-	std::unordered_map<std::string, std::any> m_values;
+	Environment& ancestor(int distance);
+
+	Environment* m_enclosing = nullptr;
+	std::unordered_map<std::string, object_t> m_values;
 };
 
 

@@ -8,29 +8,8 @@
 ParseError Error(const Token& token, const std::string& message)
 {
 	Lox::Error(token, message);
-	return ParseError();
+	return {};
 };
-
-#define PrecedenceBinary(name, higher, tokenTypes, ...) \
-const auto name = [&]() \
-{ \
-	Expr* expr = higher(); \
-	while (match({tokenTypes, __VA_ARGS__})) \
-	{ \
-		const Token op = previous(); \
-		Expr* right = higher(); \
-		expr = new Expr::Binary(expr, op, right); \
-	} \
-	return expr; \
-} \
-
-
-std::vector<Stmt*> ParseTokens(const std::vector<Token>& tokens)
-{
-	//nts: this function seems dumb
-	Parser parser(tokens);
-	return parser.parse();
-}
 
 std::vector<Stmt*> Parser::parse()
 {
@@ -41,6 +20,7 @@ std::vector<Stmt*> Parser::parse()
 	}
 	return statements;
 }
+
 
 Expr* Parser::expression()
 {
@@ -56,7 +36,7 @@ Stmt* Parser::declaration()
 		if (match(VAR)) return varDeclaration();
 		return statement();
 	}
-	catch (ParseError error)
+	catch (ParseError& )
 	{
 		synchronize();
 		return nullptr;
@@ -65,7 +45,16 @@ Stmt* Parser::declaration()
 
 Stmt* Parser::classDeclaration()
 {
-	Token name = consume(IDENTIFIER, "Expect class name.");
+	const Token name = consume(IDENTIFIER, "Expect class name.");
+
+	Expr::Variable* superclass = nullptr;
+
+	if (match(LESS))
+	{
+		consume(IDENTIFIER, "Expect superclass name.");
+		superclass = new Expr::Variable(previous());
+	}
+
 	consume(LEFT_BRACE, "Expect '{' before class body.");
 
 	std::vector<Stmt::Function> methods;
@@ -77,7 +66,7 @@ Stmt* Parser::classDeclaration()
 
 	consume(RIGHT_BRACE, "Expect '}' after class body.");
 
-	return new Stmt::Class(name, methods);
+	return new Stmt::Class(name, superclass, methods);
 }
 
 Stmt* Parser::statement()
@@ -217,7 +206,7 @@ Stmt* Parser::expressionStatement()
 	return new Stmt::Expression(expr);
 }
 
-Stmt::Function* Parser::function(std::string kind)
+Stmt::Function* Parser::function(const std::string& kind)
 {
 	Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
 	consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
@@ -236,8 +225,9 @@ Stmt::Function* Parser::function(std::string kind)
 	consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
 	consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
-	const std::vector<Stmt*> body = block();
-	return new Stmt::Function(name, parameters, body);
+	std::vector<Stmt*> body = block();
+
+	return new Stmt::Function(name, std::move(parameters), std::move(body));
 }
 
 std::vector<Stmt*> Parser::block()
@@ -390,7 +380,7 @@ Expr* Parser::finishCall(Expr* callee)
 
 	const Token paren = consume(RIGHT_PAREN, "Expect '(' after arguments.");
 
-	return new Expr::Call(callee, paren, arguments);
+	return new Expr::Call(callee, paren, std::move(arguments));
 }
 
 Expr* Parser::call()
@@ -421,19 +411,25 @@ Expr* Parser::primary()
 {
 	if (match(FALSE)) return new Expr::Literal(false);
 	if (match(TRUE)) return new Expr::Literal(true);
-	if (match(NIL)) return new Expr::Literal(Object::Nil());
+	if (match(NIL)) return new Expr::Literal({});
 
 	if (match(NUMBER, STRING))
 	{
 		return new Expr::Literal(previous().literal);
 	}
 
+	if (match(SUPER))
+	{
+		Token keyword = previous();
+		consume(DOT, "Expect '.' after 'super'.");
+		Token method = consume(IDENTIFIER, "Ex[ect superclass method name.");
+		return new Expr::Super(keyword, method);
+	}
+
 	if (match(THIS)) return new Expr::This(previous());
 
 	if (match(IDENTIFIER))
 	{
-
-		// nts: return std::make_unique<Expr::Variable>(previous());
 		return new Expr::Variable(previous());
 	}
 
@@ -447,7 +443,7 @@ Expr* Parser::primary()
 	throw error(peek(), "Expected expression.");
 }
 
-// match would go here
+
 
 Token Parser::consume(const TokenType type, const std::string& message)
 {
@@ -455,8 +451,6 @@ Token Parser::consume(const TokenType type, const std::string& message)
 
 	throw error(peek(), message);
 }
-
-
 
 bool Parser::check(const TokenType type)
 {
@@ -482,13 +476,13 @@ Token Parser::peek()
 
 Token Parser::previous()
 {
-	return tokens.at(current - 1);
+	return tokens.at(static_cast<size_t>(current) - 1);
 }
 
 Parser::ParseError Parser::error(const Token& token, const std::string& message) const
 {
 	Lox::Error(token, message);
-	return ParseError();
+	return {};
 }
 
 void Parser::synchronize()

@@ -1,24 +1,25 @@
 #include "environment.h"
 
+#include "lox.h"
 #include "RuntimeError.h"
 
-Environment::Environment(Environment* enclosing): enclosing(enclosing)
+Environment::Environment(Environment* enclosing): m_enclosing(enclosing)
 {}
 
-Object Environment::get(const Token& name)
+object_t Environment::get(const Token& name)
 {
 	// current scope
 	if (const auto& it = m_values.find(name.lexeme); it != m_values.end())
 	{ return it->second; }
 
 	// enclosing scope
-	if (enclosing != nullptr)
-	{ return enclosing->get(name); }
+	if (m_enclosing != nullptr)
+	{ return m_enclosing->get(name); }
 
 	throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
 }
 
-void Environment::define(const std::string& name, const Object& value)
+void Environment::define(const std::string& name, const object_t& value)
 {
 	m_values.insert_or_assign(name, value);
 }
@@ -28,22 +29,22 @@ Environment& Environment::ancestor(const int distance)
 	Environment* environment = this;
 	for (int i = 0; i < distance; i++)
 	{
-		environment = environment->enclosing;
+		environment = environment->m_enclosing;
 	}
 	return *environment;
 }
 
-Object Environment::getAt(const int distance, const std::string& name)
+object_t Environment::getAt(const int distance, const std::string& name)
 {
 	return ancestor(distance).m_values.at(name);
 }
 
-void Environment::assignAt(const int distance, const Token& name, const Object& value)
+void Environment::assignAt(const int distance, const Token& name, const object_t& value)
 {
 	ancestor(distance).m_values.insert_or_assign(name.lexeme, value);
 }
 
-void Environment::assign(const Token& name, const Object& value)
+void Environment::assign(const Token& name, const object_t& value)
 {
 	if (m_values.contains(name.lexeme))
 	{
@@ -51,9 +52,9 @@ void Environment::assign(const Token& name, const Object& value)
 		return;
 	}
 
-	if (enclosing != nullptr)
+	if (m_enclosing != nullptr)
 	{
-		enclosing->assign(name, value);
+		m_enclosing->assign(name, value);
 		return;
 	}
 

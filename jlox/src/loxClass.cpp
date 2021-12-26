@@ -6,78 +6,55 @@
 #include "loxInstance.h"
 #include "object.h"
 
-LoxClass::LoxClass(std::string name, const std::unordered_map<std::string, LoxFunction>& methods): name(std::move(name)) 
+LoxClass::LoxClass(std::string name, LoxClass* superclass, std::unordered_map<std::string, LoxFunction> methods):
+	name(std::move(name)),
+	m_superclass(superclass),
+	m_methods(std::move(methods))
 {
-	for (const auto& [methodName, methodFunction] : methods)
-	{
-		m_methods.insert_or_assign(methodName, new LoxFunction(methodFunction));
-	}
 }
 
-LoxClass::~LoxClass()
-{
-	for (const auto& [string, method] : m_methods)
-	{
-		delete method;
-	}
-}
+LoxClass::~LoxClass() = default;
 
-// nts: baseclass calls?
-LoxClass::LoxClass(const LoxClass& klass): name(klass.name)
-{
-	for (const auto& [methodName, func] : klass.m_methods)
-	{
-		m_methods.insert_or_assign(methodName, new LoxFunction(*func));
-	}
-}
-
-//LoxClass& LoxClass::operator=(const LoxClass& klass)
+//LoxClass::LoxClass(const LoxClass & klass): name(klass.name)
 //{
-//	
+//	for (const auto& [methodName, func] : klass.m_methods)
+//	{
+//		m_methods.insert_or_assign(methodName, func);
+//	}
 //}
 
-
-Object LoxClass::findMethod(const std::string& methodName) const
+object_t LoxClass::findMethod(const std::string & methodName) const
 {
 	if (m_methods.contains(methodName))
-	{ return Object(m_methods.at(methodName)->GetCopy()); } // nts: this returns a copy, not a reference
+	{ return {m_methods.at(methodName)}; } // nts: this returns a copy, not a reference
 
-	return Object::Nil();
-}
-
-std::unique_ptr<LoxCallable> LoxClass::GetCopy()
-{
-	//return LoxCallable::GetCopy();
-	return std::make_unique<LoxClass>(*this);
-}
-
-std::string LoxClass::toString()
-{
-	return name;
-}
-
-std::string LoxClass::toString() const
-{
-	return name;
-}
-
-Object LoxClass::call(Interpreter* interpreter, std::vector<Object> arguments) const
-{
-	auto instance = std::make_unique<LoxInstance>(*this);
-
-	if (const auto initializer = findMethod("init"); initializer.type != Object::Type::NIL)
+	if (m_superclass != nullptr)
 	{
-		dynamic_cast<LoxFunction*>(initializer.callable.get())->bind(instance.get()).call(interpreter, arguments);
+		return m_superclass->findMethod(methodName);
 	}
 
-	return Object(std::move(instance));
+	return {};
+}
+
+object_t LoxClass::call(Interpreter * interpreter, const std::vector<object_t> arguments) const
+{
+	// nts: leak
+	auto* instance = new LoxInstance(*this);
+
+	if (const auto initializer = findMethod("init"); !isNull(initializer))
+	{
+		as<LoxFunction>(initializer).bind(instance).call(interpreter, arguments);
+	}
+
+	return {instance};
 }
 
 int LoxClass::arity() const
 {
-	if (const auto initializer = findMethod("init"); initializer.type != Object::Type::NIL)
+	if (const auto initializer = findMethod("init"); !isNull(initializer))
 	{
-		return initializer.callable->arity();
+		return as<LoxFunction>(initializer).arity();
 	}
+
 	return 0;
 }

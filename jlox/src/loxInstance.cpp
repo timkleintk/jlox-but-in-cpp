@@ -6,7 +6,7 @@
 LoxInstance::LoxInstance(const LoxClass& klass): m_class(klass)
 {}
 
-Object LoxInstance::get(const Token& name)
+object_t LoxInstance::get(const Token& name)
 {
 	// field
 	if (m_fields.contains(name.lexeme))
@@ -15,17 +15,17 @@ Object LoxInstance::get(const Token& name)
 	}
 
 	// method
-	const Object method = m_class.findMethod(name.lexeme);
-	if (method.type != Object::Type::NIL)
+	const object_t method = m_class.findMethod(name.lexeme);
+	if (!isNull(method))
 	{
-		const auto* loxFunction = reinterpret_cast<LoxFunction*>(method.callable.get());
-		return Object(std::make_unique<LoxFunction>(loxFunction->bind(this)));
+		// return a copy of the classes method, but with "this" defined in it's closure
+		return {as<LoxFunction>(method).bind(this) }; 
 	}
 
 	throw RuntimeError(name, "Undefined property '" + name.lexeme + "'.");
 }
 
-void LoxInstance::set(const Token& name, const Object& value)
+void LoxInstance::set(const Token& name, const object_t& value)
 {
 	m_fields.insert_or_assign(name.lexeme, value);
 }

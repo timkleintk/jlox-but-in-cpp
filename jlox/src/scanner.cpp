@@ -35,22 +35,22 @@ std::vector<Token> ScanTokens(const std::string& source)
 	keywords.try_emplace("while", WHILE);
 
 	// helper functions
-	const auto isAtEnd = [&]() { return current >= static_cast<int>(source.size()); };
+	const auto isAtEnd = [&] { return current >= static_cast<int>(source.size()); };
 
-	const auto addToken = [&](TokenType type, const Object& literal = {})
+	const auto addToken = [&](TokenType type, const object_t& literal = {})
 	{
 		std::string text = source.substr(start, static_cast<size_t>(current) - static_cast<size_t>(start));
 		tokens.emplace_back(type, text, literal, line);
 	};
 
 
-	const auto consume = [&]() { current++; };
+	const auto consume = [&] { current++; };
 
-	const auto advance = [&]() { return source.at(current++); };
+	const auto advance = [&] { return source.at(current++); };
 
-	const auto peek = [&]() { return isAtEnd() ? '\0' : source.at(current); };
+	const auto peek = [&] { return isAtEnd() ? '\0' : source.at(current); };
 
-	const auto peekNext = [&]() { return static_cast<size_t>(current) + 1 >= source.size() ? '\0' : source.at(static_cast<size_t>(current) + 1); };
+	const auto peekNext = [&] { return static_cast<size_t>(current) + 1 >= source.size() ? '\0' : source.at(static_cast<size_t>(current) + 1); };
 
 	const auto match = [&](const char c)
 	{
@@ -62,7 +62,7 @@ std::vector<Token> ScanTokens(const std::string& source)
 	};
 
 
-	const auto string = [&]()
+	const auto string = [&]
 	{
 		while (peek() != '"' && !isAtEnd())
 		{
@@ -84,7 +84,7 @@ std::vector<Token> ScanTokens(const std::string& source)
 		addToken(STRING, source.substr(static_cast<size_t>(start) + 1, static_cast<size_t>(current) - start - 2));
 	};
 	
-	const auto number = [&]()
+	const auto number = [&]
 	{
 		while (isdigit(peek())) consume();
 
@@ -100,7 +100,7 @@ std::vector<Token> ScanTokens(const std::string& source)
 		addToken(NUMBER, strtod(source.substr(start, static_cast<size_t>(current) - start).c_str(), nullptr));
 	};
 
-	const auto identifier = [&]()
+	const auto identifier = [&]
 	{
 		while (isalpha(peek()) || isdigit(peek())) consume();
 
@@ -110,7 +110,7 @@ std::vector<Token> ScanTokens(const std::string& source)
 	};
 	
 
-	const auto scanToken = [&]()
+	const auto scanToken = [&]
 	{
 		const char c = advance();
 		switch (c)

@@ -12,7 +12,7 @@ public:
 	explicit Resolver(Interpreter& interpreter);
 	void resolve(const std::vector<Stmt*>& stmts);
 
-#define TYPE(name, ...) void visit ## name ## Expr(Expr::name& expr, void* returnValue) override;
+#define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
 	EXPR_TYPES;
 #undef TYPE
 #define TYPE(name, ...) void visit ## name ## Stmt(Stmt::name& stmt) override;
@@ -31,7 +31,8 @@ private:
 	enum class ClassType
 	{
 		NONE,
-		CLASS
+		CLASS,
+		SUBCLASS
 	};
 
 	void resolve(Stmt* stmt);
@@ -42,7 +43,7 @@ private:
 	void endScope();
 	void declare(const Token& name);
 	void define(const Token& name);
-	void resolveLocal(Expr* expr, const Token& name) const;
+	void resolveLocal(const Expr* expr, const Token& name) const;
 
 	Interpreter& m_interpreter;
 	std::stack<std::unordered_map<std::string, bool>> m_scopes;

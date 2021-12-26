@@ -90,10 +90,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\environment.cpp" />
-    <ClCompile Include="src\expr.cpp" />
     <ClCompile Include="src\interpreter.cpp" />
     <ClCompile Include="src\lox.cpp" />
-    <ClCompile Include="src\loxCallable.cpp" />
     <ClCompile Include="src\loxClass.cpp" />
     <ClCompile Include="src\loxFunction.cpp" />
     <ClCompile Include="src\loxInstance.cpp" />

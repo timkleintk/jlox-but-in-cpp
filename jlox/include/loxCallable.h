@@ -1,6 +1,8 @@
 #pragma once
-#include <any>
+
 #include <functional>
+
+#include "object.h"
 
 class Interpreter;
 
@@ -9,18 +11,9 @@ class Interpreter;
 class LoxCallable
 {
 public:
-	LoxCallable();
-	virtual ~LoxCallable();
-	//LoxCallable(const std::function<Object(Interpreter*, std::vector<Object>)>& call, int arity);
+	LoxCallable() = default;
+	virtual ~LoxCallable() = default;
 
-	virtual std::any call(Interpreter* interpreter, std::vector<std::any> arguments) const;
-	[[nodiscard]] virtual int arity() const;
-
-	//virtual std::unique_ptr<LoxCallable> GetCopy();
-
-	//virtual std::string toString();
-
-private:
-	//int m_arity;
-	//std::function<Object(Interpreter*, std::vector<Object>)> m_call;
+	virtual object_t call(Interpreter* interpreter, std::vector<object_t> arguments) const = 0;
+	virtual int arity() const = 0;
 };

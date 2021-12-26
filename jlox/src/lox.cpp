@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <vector>
 
 #include "astPrinter.h"
@@ -12,10 +13,6 @@
 #include "RuntimeError.h"
 #include "scanner.h"
 
-// Class Lox -------------------------------------------------------
-
-
-// Public: ---------------------------------------------------------
 
 void Lox::RunFile(const char* path)
 {
@@ -26,28 +23,59 @@ void Lox::RunFile(const char* path)
 		const std::string source((std::istreambuf_iterator(inputStream)), std::istreambuf_iterator<char>());
 		Run(source);
 
-		if (hadError) { exit(65); }
-		if (hadRuntimeError) { exit(70); }
+		if (m_hadError) { exit(65); }
+		if (m_hadRuntimeError) { exit(70); }
 	}
-	//nts: add error handling
+}
+
+// returns the number of '{' + '(' - ')' - '}'
+int getBraceBalance(const std::string& src)
+{
+	int braceCount = 0;
+	for (const auto& c : src)
+	{
+		switch (c)
+		{
+		case '{':
+		case '(':
+			braceCount++;
+			break;
+		case '}':
+		case ')':
+			braceCount--;
+			break;
+		default:
+			break;
+		}
+	}
+	return braceCount;
 }
 
 void Lox::RunPrompt()
 {
-	// TODO: make this pretty
+	std::string source;
 	std::string line;
 
-	std::cout << "> ";
-	std::getline(std::cin, line);
-
-	while (!std::cin.eof() && line != "exit")
+	do
 	{
-		Run(line);
-		hadError = false;
-
 		std::cout << "> ";
-		std::getline(std::cin, line);
-	}
+		std::getline(std::cin, source);
+
+
+		while (getBraceBalance(source) > 0)
+		{
+			std::cout << "  ";
+			std::getline(std::cin, line);
+			source += "\n";
+			source += line;
+		}
+
+		if (std::cin.eof() || source == "exit" ) { break; }
+
+		Run(source);
+		m_hadError = false;
+
+	} while (true);
 }
 
 void Lox::Error(const int line, const std::string& message)
@@ -58,12 +86,12 @@ void Lox::Error(const int line, const std::string& message)
 void Lox::runtimeError(const RuntimeError& error)
 {
 	std::cerr << error.what() << std::endl << "[line " << error.token.line << "]" << std::endl;
-	hadRuntimeError = true;
+	m_hadRuntimeError = true;
 }
 
 void Lox::Error(const Token& token, const std::string& message)
 {
-	if (token.type == TokenType::END_OF_FILE)
+	if (token.type == END_OF_FILE)
 	{
 		Report(token.line, " at end", message);
 	}
@@ -74,12 +102,10 @@ void Lox::Error(const Token& token, const std::string& message)
 }
 
 
-// Private: --------------------------------------------------------
+Interpreter Lox::m_interpreter = Interpreter();
 
-Interpreter Lox::interpreter = Interpreter();
-
-bool Lox::hadError = false;
-bool Lox::hadRuntimeError = false;
+bool Lox::m_hadError = false;
+bool Lox::m_hadRuntimeError = false;
 
 void Lox::Run(const std::string& source)
 {
@@ -87,24 +113,26 @@ void Lox::Run(const std::string& source)
 	const std::vector<Token> tokens = ScanTokens(source);
 
 	// parse tokens
-	const std::vector<Stmt*> statements = ParseTokens(tokens);
+	Parser parser(tokens);
+	const std::vector<Stmt*> statements = parser.parse();
 
 	// Stop if there was a syntax error.
-	if (hadError) { return; }
+	if (m_hadError) { return; }
 
 	// resolve variable names
-	Resolver(interpreter).resolve(statements);
+	Resolver resolver(m_interpreter);
+	resolver.resolve(statements);
 
 	// Stop if there was a resolution error.
-	if (hadError) { return; }
+	if (m_hadError) { return; }
 
 	// interpret
-	interpreter.interpret(statements);
+	m_interpreter.interpret(statements);
 }
 
 void Lox::Report(const int line, const std::string& where, const std::string& message)
 {
 	std::cout << "[line " << line << "] Error" << where << ": " << message << std::endl;
-	hadError = true;
+	m_hadError = true;
 }
 

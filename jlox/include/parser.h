@@ -37,7 +37,7 @@ private:
 	Stmt* varDeclaration();
 	Stmt* whileStatement();
 	Stmt* expressionStatement();
-	Stmt::Function* function(std::string kind);
+	Stmt::Function* function(const std::string& kind);
 	std::vector<Stmt*> block();
 	Expr* assignment();
 	Expr* logicOr();
