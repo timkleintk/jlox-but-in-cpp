@@ -5,6 +5,14 @@
 Resolver::Resolver(Interpreter& interpreter): m_interpreter(interpreter)
 {}
 
+void Resolver::resolve(const std::vector<std::unique_ptr<Stmt>>& stmts)
+{
+	for (const auto& stmt : stmts)
+	{
+		resolve(stmt.get());
+	}
+}
+
 void Resolver::resolve(const std::vector<Stmt*>& stmts)
 {
 	for (const auto& stmt : stmts)
@@ -73,11 +81,11 @@ object_t Resolver::visitSuperExpr(Expr::Super& expr)
 {
 	if (m_currentClass == ClassType::NONE)
 	{
-		Lox::Error(expr.keyword, "Can't use 'super' outside of a class.");
+		Lox::Error(expr.keyword, "Cannot use 'super' outside of a class.");
 	}
 	else if (m_currentClass != ClassType::SUBCLASS)
 	{
-		Lox::Error(expr.keyword, "Can't use 'super' in a class with no superclass.");
+		Lox::Error(expr.keyword, "Cannot use 'super' in a class with no superclass.");
 	}
 
 	resolveLocal(&expr, expr.keyword);
@@ -88,7 +96,7 @@ object_t Resolver::visitThisExpr(Expr::This& expr)
 {
 	if (m_currentClass == ClassType::NONE)
 	{
-		Lox::Error(expr.keyword, "Can't use 'this' outside of a class.");
+		Lox::Error(expr.keyword, "Cannot use 'this' outside of a class.");
 	}
 
 	resolveLocal(&expr, expr.keyword);
@@ -107,7 +115,7 @@ object_t Resolver::visitVariableExpr(Expr::Variable& expr)
 		m_scopes.top().contains(expr.name.lexeme) &&
 		m_scopes.top().at(expr.name.lexeme) == false)
 	{
-		Lox::Error(expr.name, "Can't read local variable in its own initializer.");
+		Lox::Error(expr.name, "Cannot read local variable in its own initializer.");
 	}
 
 	resolveLocal(&expr, expr.name);
@@ -123,7 +131,7 @@ void Resolver::visitBlockStmt(Stmt::Block& stmt)
 
 void Resolver::visitClassStmt(Stmt::Class& stmt)
 {
-	ClassType enclosingClass = m_currentClass;
+	const ClassType enclosingClass = m_currentClass;
 	m_currentClass = ClassType::CLASS;
 
 	declare(stmt.name);
@@ -135,6 +143,7 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 		if (stmt.name.lexeme == stmt.superclass->name.lexeme)
 		{
 			Lox::Error(stmt.superclass->name, "A class can't inherit from itself.");
+			beginScope();
 		}
 		else
 		{
@@ -148,11 +157,11 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 	beginScope();
 	m_scopes.top().insert_or_assign("this", true);
 
-	for (const Stmt::Function& method : stmt.methods)
+	for (const auto& method : stmt.methods)
 	{
 		FunctionType declaration = FunctionType::METHOD;
-		if (method.name.lexeme == "init") { declaration = FunctionType::INITIALIZER; }
-		resolveFunction(method, declaration);
+		if (method->name.lexeme == "init") { declaration = FunctionType::INITIALIZER; }
+		resolveFunction(*method, declaration);
 	}
 
 	endScope();
@@ -178,9 +187,9 @@ void Resolver::visitFunctionStmt(Stmt::Function& stmt)
 void Resolver::visitIfStmt(Stmt::If& stmt)
 {
 	resolve(stmt.condition);
-	resolve(stmt.thenBranch);
+	resolve(stmt.thenBranch.get());
 	if (stmt.elseBranch != nullptr)
-	{ resolve(stmt.elseBranch); }
+	{ resolve(stmt.elseBranch.get()); }
 }
 
 void Resolver::visitPrintStmt(Stmt::Print& stmt)
@@ -191,12 +200,12 @@ void Resolver::visitPrintStmt(Stmt::Print& stmt)
 void Resolver::visitReturnStmt(Stmt::Return& stmt)
 {
 	if (m_currentFunction == FunctionType::NONE)
-	{ Lox::Error(stmt.keyword, "Can't return from top-level code."); }
+	{ Lox::Error(stmt.keyword, "Cannot return from top-level code."); }
 	if (stmt.value != nullptr)
 	{
 		if (m_currentFunction == FunctionType::INITIALIZER)
 		{
-			Lox::Error(stmt.keyword, "Can't return a value from an initializer.");
+			Lox::Error(stmt.keyword, "Cannot return a value from an initializer.");
 		}
 
 		resolve(stmt.value);
@@ -216,7 +225,7 @@ void Resolver::visitVarStmt(Stmt::Var& stmt)
 void Resolver::visitWhileStmt(Stmt::While& stmt)
 {
 	resolve(stmt.condition);
-	resolve(stmt.body);
+	resolve(stmt.body.get());
 }
 
 void Resolver::resolve(Stmt* stmt) { stmt->accept(this); }
@@ -255,7 +264,7 @@ void Resolver::declare(const Token& name)
 
 	auto& scope = m_scopes.top();
 	if (scope.contains(name.lexeme))
-	{ Lox::Error(name, "Already a variable with this name in this scope."); }
+	{ Lox::Error(name, "Variable with this name already declared in this scope."); }
 	scope.insert_or_assign(name.lexeme, false);
 }
 

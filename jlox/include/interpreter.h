@@ -1,7 +1,6 @@
 #pragma once
 #include "environment.h"
 #include "expr.h"
-#include "loxCallable.h"
 
 
 class Interpreter final : public Expr::Visitor, public Stmt::Visitor
@@ -22,7 +21,7 @@ public:
 	void resolve(const Expr* expr, int depth);
 	object_t lookUpVariable(const Token& name, const Expr* expr);
 
-	void executeBlock(const std::vector<Stmt*>& stmts, Environment* environment);
+	void executeBlock(const std::vector<std::unique_ptr<Stmt>>& stmts, Environment* environment);
 
 	Environment globals;
 	std::unordered_map<const Expr*, int> locals;
@@ -33,7 +32,6 @@ private:
 	object_t evaluate(Expr* expr);
 
 	void execute(Stmt* stmt);
-
 };
 
 
@@ -61,15 +59,6 @@ inline bool IsTruthy(const object_t& object)
 	return a.equals(b);
   }
 */
-//template<typename T>
-inline bool IsEqual(const object_t& a, const object_t& b)
-{
-	if (!a.has_value() && !b.has_value()) { return true; }
-	if (!a.has_value()) { return false; }
-	if (a.type() != b.type()) { return false; }
-	printf("The IsEqual function is not complete yet\n");
-	// bug: not implemented
-	return false;
-}
 
+inline bool IsEqual(const object_t& a, const object_t& b);
 

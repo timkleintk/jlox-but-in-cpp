@@ -1,6 +1,7 @@
 // https://craftinginterpreters.com/parsing-expressions.html#the-parser-class
 
 #pragma once
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -9,9 +10,6 @@
 
 class ParseError final : public std::exception {};
 
-std::vector<Stmt*> ParseTokens(const std::vector<Token>& tokens);
-
-
 class Parser
 {
 public:
@@ -19,26 +17,25 @@ public:
 	std::vector<Token> tokens;
 	int current = 0;
 
-	Parser(std::vector<Token> tokens): tokens(std::move(tokens))
-	{
-	}
+	explicit Parser(std::vector<Token> tokens): tokens(std::move(tokens))
+	{}
 
 	std::vector<Stmt*> parse();
 
 private:
 	Expr* expression();
-	Stmt* declaration();
-	Stmt* classDeclaration();
-	Stmt* statement();
-	Stmt* forStatement();
-	Stmt* ifStatement();
-	Stmt* printStatement();
-	Stmt* returnStatement();
-	Stmt* varDeclaration();
-	Stmt* whileStatement();
-	Stmt* expressionStatement();
-	Stmt::Function* function(const std::string& kind);
-	std::vector<Stmt*> block();
+	std::unique_ptr<Stmt> declaration();
+	std::unique_ptr<Stmt> classDeclaration();
+	std::unique_ptr<Stmt> statement();
+	std::unique_ptr<Stmt> forStatement();
+	std::unique_ptr<Stmt> ifStatement();
+	std::unique_ptr<Stmt> printStatement();
+	std::unique_ptr<Stmt> returnStatement();
+	std::unique_ptr<Stmt> varDeclaration();
+	std::unique_ptr<Stmt> whileStatement();
+	std::unique_ptr<Stmt> expressionStatement();
+	std::unique_ptr<Stmt::Function> function(const std::string& kind);
+	std::vector<std::unique_ptr<Stmt>> block();
 	Expr* assignment();
 	Expr* logicOr();
 	Expr* logicAnd();

@@ -36,6 +36,11 @@ object_t LoxClass::findMethod(const std::string & methodName) const
 	return {};
 }
 
+bool LoxClass::operator==(const LoxClass& as) const
+{
+	return as.name == name;
+}
+
 object_t LoxClass::call(Interpreter * interpreter, const std::vector<object_t> arguments) const
 {
 	// nts: leak

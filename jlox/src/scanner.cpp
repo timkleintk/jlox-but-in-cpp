@@ -83,7 +83,7 @@ std::vector<Token> ScanTokens(const std::string& source)
 		// trim the double quotes
 		addToken(STRING, source.substr(static_cast<size_t>(start) + 1, static_cast<size_t>(current) - start - 2));
 	};
-	
+
 	const auto number = [&]
 	{
 		while (isdigit(peek())) consume();
@@ -102,19 +102,20 @@ std::vector<Token> ScanTokens(const std::string& source)
 
 	const auto identifier = [&]
 	{
-		while (isalpha(peek()) || isdigit(peek())) consume();
+		while (isalpha(peek()) || isdigit(peek()) || peek() == '_') consume();
 
 		const auto it = keywords.find(source.substr(start, static_cast<size_t>(current) - start));
 		const TokenType t = it == keywords.end() ? IDENTIFIER : it->second;
 		addToken(t);
 	};
-	
+
 
 	const auto scanToken = [&]
 	{
 		const char c = advance();
 		switch (c)
 		{
+			// nts: make pragma regions
 			// single character tokens
 			{
 		case '(': addToken(LEFT_PAREN); break;
@@ -138,14 +139,20 @@ std::vector<Token> ScanTokens(const std::string& source)
 
 		case '/':
 			if (match('/'))
-				while (peek() != '\n' && !isAtEnd()) consume();
+			{
+				while (peek() != '\n' && !isAtEnd())
+				{
+					consume();
+				}
+			}
 			else
+			{
 				addToken(SLASH);
+			}
 			break;
 			}
 
-			// whitespace
-			{
+		#pragma region whitespace
 
 		case ' ':
 		case '\r':
@@ -154,7 +161,7 @@ std::vector<Token> ScanTokens(const std::string& source)
 		case '\n':
 			line++;
 			break;
-			}
+		#pragma endregion
 
 			// string literal
 		case '"': string(); break;
@@ -163,10 +170,10 @@ std::vector<Token> ScanTokens(const std::string& source)
 		default:
 			if (isdigit(c))
 				number();
-			else if (isalpha(c))
+			else if (isalpha(c) || c == '_')
 				identifier();
 			else
-				Lox::Error(line, "Unexpected character");
+				Lox::Error(line, "Unexpected character.");
 			break;
 		}
 	};

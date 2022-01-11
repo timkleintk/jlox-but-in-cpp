@@ -28,51 +28,116 @@ void Lox::RunFile(const char* path)
 	}
 }
 
-// returns the number of '{' + '(' - ')' - '}'
-int getBraceBalance(const std::string& src)
+// nts: better documentation here
+// returns wether or not there is enough in the source string to craft a full statement.
+bool IsSourceComplete(const std::string& src)
 {
-	int braceCount = 0;
+	std::stack<char> braceBalance;
+	char previous = 0;
+	bool inComment = false;
+	bool inString = false;
+
+	// three newlines at the end should return true
+	if (src.size() >= 3 && src.substr(src.size() - 3) == "\n\n\n") return true;
+
 	for (const auto& c : src)
 	{
-		switch (c)
+		if (inString)
 		{
-		case '{':
-		case '(':
-			braceCount++;
-			break;
-		case '}':
-		case ')':
-			braceCount--;
-			break;
-		default:
-			break;
+			if (c == '"') inString = false;
+		}
+		else if (inComment)
+		{
+			if (c == '\n') inComment = false;
+		}
+		else
+		{
+			switch (c)
+			{
+			case '/':
+				// peek second slash
+				if (*(&c + 1) == '/') { inComment = true; }
+				continue;
+			case '"':
+				inString = true;
+				break;
+			case '{':
+			case '(':
+				braceBalance.push(c);
+				break;
+			case '}':
+			case ')':
+			{
+				const char complement = c == '}' ? '{' : '(';
+				if (!braceBalance.empty() && braceBalance.top() == complement)
+				{
+					braceBalance.pop();
+				}
+				else
+				{
+					return true;
+				}
+				break;
+			}
+			default:
+				break;
+			}
+
+			if (!std::isspace(c)) previous = c;
 		}
 	}
-	return braceCount;
+
+	if (inString) return false;
+	if (braceBalance.empty())
+	{
+		if (previous == '}' || previous == ';' || previous == '\0') return true;
+	}
+
+	return false;
 }
 
-void Lox::RunPrompt()
+void Lox::RunPrompt(const bool qualityOfLife)
 {
 	std::string source;
 	std::string line;
 
 	do
 	{
-		std::cout << "> ";
+		if (qualityOfLife)
+		{
+			std::cout << "> ";
+		}
+
+		// get input
 		std::getline(std::cin, source);
 
+		// special commands
+		if (std::cin.eof() || source == "exit") { break; }
+		if (source == "clear") { system("CLS"); continue; }
+		//if (source == "tests") { RunTests(); }
 
-		while (getBraceBalance(source) > 0)
+		// multiline inputs
+		while (!IsSourceComplete(source))
 		{
-			std::cout << "  ";
+			if (qualityOfLife)
+			{
+				std::cout << "  ";
+			}
 			std::getline(std::cin, line);
 			source += "\n";
 			source += line;
 		}
 
-		if (std::cin.eof() || source == "exit" ) { break; }
-
+		// interpret
 		Run(source);
+
+		// for unit testing
+		if (!qualityOfLife)
+		{
+			if (m_hadError) { exit(65); }
+			if (m_hadRuntimeError) { exit(70); }
+		}
+
 		m_hadError = false;
 
 	} while (true);
@@ -114,7 +179,7 @@ void Lox::Run(const std::string& source)
 
 	// parse tokens
 	Parser parser(tokens);
-	const std::vector<Stmt*> statements = parser.parse();
+	std::vector<Stmt*> statements = parser.parse();
 
 	// Stop if there was a syntax error.
 	if (m_hadError) { return; }
@@ -132,7 +197,12 @@ void Lox::Run(const std::string& source)
 
 void Lox::Report(const int line, const std::string& where, const std::string& message)
 {
-	std::cout << "[line " << line << "] Error" << where << ": " << message << std::endl;
+	(void)line;
+	//*m_errorstream << "[line " << line << "] Error" << where << ": " << message << std::endl;
+	//std::cout << "[line " << line << "] Error" << where << ": " << message << std::endl;
+	std::cerr << "[line " << line << "] Error" << where << ": " << message << "\n";
+	//std::cout << "Error" << where << ": " << message << "\n";
+	//std::cerr << "Error" << where << ": " << message << "\n";
 	m_hadError = true;
 }
 

@@ -10,7 +10,7 @@ class Lox
 public:
 	static void RunFile(const char* path);
 
-	static void RunPrompt();
+	static void RunPrompt(bool qualityOfLife = true);
 
 	static void Error(const Token& token, const std::string& message);
 

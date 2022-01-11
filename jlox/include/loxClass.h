@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 
 #include "loxCallable.h"
 
@@ -16,6 +17,7 @@ public:
 
 
 	object_t findMethod(const std::string& methodName) const;
+	bool operator==(const LoxClass& as) const;
 
 	std::string name;
 	LoxClass* m_superclass;

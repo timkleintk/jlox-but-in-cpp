@@ -1,12 +1,10 @@
 #pragma once
 
-#include <functional>
-
 #include "object.h"
 
+#include <vector>
+
 class Interpreter;
-
-
 
 class LoxCallable
 {

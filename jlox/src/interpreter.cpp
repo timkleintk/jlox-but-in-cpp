@@ -32,17 +32,34 @@ Interpreter::~Interpreter()
 	assert(m_environment == &globals);
 }
 
-object_t Interpreter::evaluate(Expr* expr)
-{
-	return expr->accept(this);
-}
+object_t Interpreter::evaluate(Expr* expr) { return expr->accept(this); }
 
-void Interpreter::execute(Stmt* stmt)
-{
-	stmt->accept(this);
-}
+void Interpreter::execute(Stmt* stmt) { stmt->accept(this); }
 
-void Interpreter::executeBlock(const std::vector<Stmt*>& stmts, Environment* environment)
+#define EqualCheck(T) if (is<T>(a)) return as<T>(a) == as<T>(b) 
+bool IsEqual(const object_t& a, const object_t& b)
+{
+	if (!a.has_value() && !b.has_value()) { return true; } // if both nil
+	if (!a.has_value()) { return false; }                  // if only one operand is nil
+	if (a.type() != b.type()) { return false; }            // a and b should be the same type
+
+	EqualCheck(bool);
+	EqualCheck(std::string);
+	EqualCheck(double);
+	EqualCheck(LoxClass*);
+	EqualCheck(LoxInstance*);
+	EqualCheck(LoxCallable*);
+	EqualCheck(LoxFunction);
+	
+
+	// bug: not fully implemented
+	printf("Warning: tried to compare two values of unknown type. Known types: nil, bool, string, number, class.\n");
+
+	return false;
+}
+#undef EqualCheck
+
+void Interpreter::executeBlock(const std::vector<std::unique_ptr<Stmt>>& stmts, Environment* environment)
 {
 	Environment* previous = m_environment;
 	m_environment = environment;
@@ -51,7 +68,7 @@ void Interpreter::executeBlock(const std::vector<Stmt*>& stmts, Environment* env
 	{
 		for (const auto& stmt : stmts)
 		{
-			execute(stmt);
+			execute(stmt.get());
 		}
 	}
 	catch (...)
@@ -68,7 +85,7 @@ void Interpreter::interpret(const std::vector<Stmt*>& statements)
 {
 	try
 	{
-		for (Stmt* statement : statements)
+		for (const auto& statement : statements)
 		{
 			execute(statement);
 		}
@@ -108,10 +125,10 @@ object_t Interpreter::visitBinaryExpr(Expr::Binary& expr)
 		checkNumberOperands(expr.op, left, right);
 		return as<double>(left) <= as<double>(right);
 	case BANG_EQUAL:
-		checkNumberOperands(expr.op, left, right);
+		//checkNumberOperands(expr.op, left, right);
 		return!IsEqual(left, right);
 	case EQUAL_EQUAL:
-		checkNumberOperands(expr.op, left, right);
+		//checkNumberOperands(expr.op, left, right);
 		return IsEqual(left, right);
 
 		// arithmetic
@@ -175,15 +192,9 @@ object_t Interpreter::visitGetExpr(Expr::Get& expr)
 	throw RuntimeError(expr.name, "Only instances have properties.");
 }
 
-object_t Interpreter::visitGroupingExpr(Expr::Grouping& expr)
-{
-	return evaluate(expr.expression);
-}
+object_t Interpreter::visitGroupingExpr(Expr::Grouping& expr) { return evaluate(expr.expression); }
 
-object_t Interpreter::visitLiteralExpr(Expr::Literal& expr)
-{
-	return expr.value;
-}
+object_t Interpreter::visitLiteralExpr(Expr::Literal& expr) { return expr.value; }
 
 object_t Interpreter::visitLogicalExpr(Expr::Logical& expr)
 {
@@ -218,22 +229,19 @@ object_t Interpreter::visitSetExpr(Expr::Set& expr)
 object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 {
 	const int distance = locals.at(&expr);
-	LoxClass* superclass = as<LoxClass*>(m_environment->getAt(distance, "super"));
+	const LoxClass* const superclass = as<LoxClass*>(m_environment->getAt(distance, "super"));
 
-	LoxInstance* object = as<LoxInstance*>(m_environment->getAt(distance - 1, "this"));
+	LoxInstance* instance = as<LoxInstance*>(m_environment->getAt(distance - 1, "this"));
 
-	LoxFunction method = as<LoxFunction>(superclass->findMethod(expr.method.lexeme));
+	const object_t method = superclass->findMethod(expr.method.lexeme);
+
 	if (isNull(method))
-	{
-		throw RuntimeError(expr.method, "Undefined property '" + expr.method.lexeme + "'.");
-	}
-	return method.bind(object);
+	{ throw RuntimeError(expr.method, "Undefined property '" + expr.method.lexeme + "'."); }
+
+	return {as<LoxFunction>(method).bind(instance)};
 }
 
-object_t Interpreter::visitThisExpr(Expr::This& expr)
-{
-	return lookUpVariable(expr.keyword, &expr);
-}
+object_t Interpreter::visitThisExpr(Expr::This& expr) { return lookUpVariable(expr.keyword, &expr); }
 
 object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 {
@@ -250,10 +258,7 @@ object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 
 }
 
-object_t Interpreter::visitVariableExpr(Expr::Variable& expr)
-{
-	return lookUpVariable(expr.name, &expr);
-}
+object_t Interpreter::visitVariableExpr(Expr::Variable& expr) { return lookUpVariable(expr.name, &expr); }
 
 object_t Interpreter::visitAssignExpr(Expr::Assign& expr)
 {
@@ -287,7 +292,7 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 		const object_t lc = evaluate(stmt.superclass);
 		if (!is<LoxClass*>(lc))
 		{
-			throw RuntimeError(stmt.superclass->name, "Superclass must be a class."); 
+			throw RuntimeError(stmt.superclass->name, "Superclass must be a class.");
 		}
 		superclass = as<LoxClass*>(lc);
 	}
@@ -301,10 +306,10 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 	}
 
 	std::unordered_map<std::string, LoxFunction> methods;
-	for (Stmt::Function& method : stmt.methods)
+	for (const auto& method : stmt.methods)
 	{
-		LoxFunction function(method, m_environment, method.name.lexeme == "init");
-		methods.insert_or_assign(method.name.lexeme, function);
+		LoxFunction function(method.get(), m_environment, method->name.lexeme == "init");
+		methods.insert_or_assign(method->name.lexeme, function);
 	}
 
 	if (superclass != nullptr)
@@ -314,29 +319,26 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 	}
 
 	// nts: leak
-	m_environment->assign(stmt.name, object_t(new LoxClass(stmt.name.lexeme, superclass, methods)));
+	m_environment->assign(stmt.name, object_t(new LoxClass(stmt.name.lexeme, superclass, std::move(methods))));
 }
 
-void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
-{
-	evaluate(stmt.expression);
-}
+void Interpreter::visitExpressionStmt(Stmt::Expression& stmt) { evaluate(stmt.expression); }
 
 void Interpreter::visitFunctionStmt(Stmt::Function& stmt)
 {
 	// nts: leak
-	m_environment->define(stmt.name.lexeme, object_t(static_cast<LoxCallable*>(new LoxFunction(stmt, m_environment, false))));
+	m_environment->define(stmt.name.lexeme, object_t(static_cast<LoxCallable*>(new LoxFunction(&stmt, m_environment, false))));
 }
 
 void Interpreter::visitIfStmt(Stmt::If& stmt)
 {
 	if (IsTruthy(evaluate(stmt.condition)))
 	{
-		execute(stmt.thenBranch);
+		execute(stmt.thenBranch.get());
 	}
 	else if (stmt.elseBranch != nullptr)
 	{
-		execute(stmt.elseBranch);
+		execute(stmt.elseBranch.get());
 	}
 }
 
@@ -368,7 +370,7 @@ void Interpreter::visitWhileStmt(Stmt::While& stmt)
 {
 	while (IsTruthy(evaluate(stmt.condition)))
 	{
-		execute(stmt.body);
+		execute(stmt.body.get());
 	}
 }
 

@@ -21,6 +21,8 @@ std::string toString(const object_t& o);
 
 bool isNull(const object_t& o);
 
+// implementations -------------------------------------------------
+
 #if defined(OBJECT_IS_ANY)
 
 template<typename T>

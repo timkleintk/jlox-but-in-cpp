@@ -15,7 +15,15 @@ int main(const int argc, char** argv)
 
 	if (argc == 2)
 	{
-		Lox::RunFile(argv[1]);
+		// nts: not elegant
+		if (strcmp(argv[1], "test") == 0)
+		{
+			Lox::RunPrompt(false);
+		}
+		else
+		{
+			Lox::RunFile(argv[1]);
+		}
 	}
 	else
 	{

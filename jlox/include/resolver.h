@@ -10,6 +10,7 @@ class Resolver final : public Stmt::Visitor, public Expr::Visitor
 {
 public:
 	explicit Resolver(Interpreter& interpreter);
+	void resolve(const std::vector<std::unique_ptr<Stmt>>& stmts);
 	void resolve(const std::vector<Stmt*>& stmts);
 
 #define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;

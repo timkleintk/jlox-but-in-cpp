@@ -1,6 +1,7 @@
 #include "parser.h"
 
 
+#include <cassert>
 #include <cstdarg>
 
 #include "lox.h"
@@ -16,7 +17,8 @@ std::vector<Stmt*> Parser::parse()
 	std::vector<Stmt*> statements;
 	while (!isAtEnd())
 	{
-		statements.emplace_back(declaration());
+		// nts: leak
+		statements.emplace_back(declaration().release());
 	}
 	return statements;
 }
@@ -27,7 +29,7 @@ Expr* Parser::expression()
 	return assignment();
 }
 
-Stmt* Parser::declaration()
+std::unique_ptr<Stmt> Parser::declaration()
 {
 	try
 	{
@@ -36,14 +38,14 @@ Stmt* Parser::declaration()
 		if (match(VAR)) return varDeclaration();
 		return statement();
 	}
-	catch (ParseError& )
+	catch (ParseError&)
 	{
 		synchronize();
 		return nullptr;
 	}
 }
 
-Stmt* Parser::classDeclaration()
+std::unique_ptr<Stmt> Parser::classDeclaration()
 {
 	const Token name = consume(IDENTIFIER, "Expect class name.");
 
@@ -57,37 +59,44 @@ Stmt* Parser::classDeclaration()
 
 	consume(LEFT_BRACE, "Expect '{' before class body.");
 
-	std::vector<Stmt::Function> methods;
+	std::vector<std::unique_ptr<Stmt::Function>> methods;
 	while (!check(RIGHT_BRACE) && !isAtEnd())
 	{
-		std::unique_ptr<Stmt::Function> p(function("method"));
-		methods.push_back(*p);
+		// nts: this could probably be improved
+		// nts: ?!?!?!?!??!!?!??!?!?!
+		//std::unique_ptr<Stmt::Function> p = function("method");
+
+		//methods.push_back(*function("method"));
+		methods.emplace_back(function("method"));
 	}
 
 	consume(RIGHT_BRACE, "Expect '}' after class body.");
 
-	return new Stmt::Class(name, superclass, methods);
+	//return new Stmt::Class(name, superclass, methods);
+	return std::make_unique<Stmt::Class>(name, superclass, std::move(methods));
 }
 
-Stmt* Parser::statement()
+std::unique_ptr<Stmt> Parser::statement()
 {
 	if (match(FOR)) return forStatement();
 	if (match(IF)) return ifStatement();
 	if (match(PRINT)) return printStatement();
 	if (match(RETURN)) return returnStatement();
 	if (match(WHILE)) return whileStatement();
-	if (match(LEFT_BRACE)) return new Stmt::Block(block());
+	//if (match(LEFT_BRACE)) return new Stmt::Block(block());
+	if (match(LEFT_BRACE)) return std::make_unique<Stmt::Block>(block());
 	return expressionStatement();
 }
 
-Stmt* Parser::forStatement()
+std::unique_ptr<Stmt> Parser::forStatement()
 {
 	// for (initializer; condition; increment;) body
 
 	consume(LEFT_PAREN, "Expect '(' after 'for'");
 
 	// initializer
-	Stmt* initializer;
+	//Stmt* initializer;
+	std::unique_ptr<Stmt> initializer;
 	if (match(SEMICOLON))
 	{
 		initializer = nullptr;
@@ -107,68 +116,92 @@ Stmt* Parser::forStatement()
 	{
 		condition = expression();
 	}
-	consume(SEMICOLON, "Expect ';' after loop condition");
+	consume(SEMICOLON, "Expect ';' after loop condition.");
 
 	// increment
 	Expr* increment = nullptr;
+	//std::unique_ptr<Expr> increment = nullptr;
 	if (!check(RIGHT_PAREN))
 	{
 		increment = expression();
+		//increment.reset(expression());
 	}
 
-	consume(RIGHT_PAREN, "Expect ')' after for clauses");
+	consume(RIGHT_PAREN, "Expect ')' after for clauses.");
 
 	// body
-	Stmt* body = statement();
+	//Stmt* body = statement().release();
+	std::unique_ptr<Stmt> body = statement();
 
 	// desugaring --------------------------------------------------
 
 	// add increment at the end of loop body
 	if (increment != nullptr)
-	{ body = new Stmt::Block({body,new Stmt::Expression(increment)}); }
+	//{ body = new Stmt::Block({body,new Stmt::Expression(increment)}); }
+	// nts: using std::move(body) as one of the arguments body should be nullptr before we actually make the reset call
+	{
+		std::vector<std::unique_ptr<Stmt>> tt;
 
-	// make a while loop out of the condition and the body
+		tt.push_back(std::move(body));
+		tt.push_back(std::make_unique<Stmt::Expression>(increment));
+
+		body.reset(new Stmt::Block(std::move(tt)));
+	}
+
+// make a while loop out of the condition and the body
 	if (condition == nullptr)
 	{ condition = new Expr::Literal(true); }
-	body = new Stmt::While(condition, body);
+	//body = new Stmt::While(condition, body);
+	body.reset(new Stmt::While(condition, std::move(body)));
 
 	// add initializer before the loop
 	if (initializer != nullptr)
-	{ body = new Stmt::Block({initializer, body}); }
+	//{ body = new Stmt::Block({initializer, body}); }
+	{
+		// nts: can I clean this up?
+		std::vector<std::unique_ptr<Stmt>> t;
+		t.push_back(std::move(initializer));
+		t.push_back(std::move(body));
 
+		body.reset(new Stmt::Block(std::move(t)));
+	}
 
-
-
+//return std::unique_ptr<Stmt>(body);
 	return body;
-
 }
 
-Stmt* Parser::ifStatement()
+std::unique_ptr<Stmt> Parser::ifStatement()
 {
 	consume(LEFT_PAREN, "Expect '(' aftr 'if',");
 	Expr* condition = expression();
 	consume(RIGHT_PAREN, "Expect ')' after if condition.");
 
-	Stmt* thenBranch = statement();
-	Stmt* elseBranch = nullptr;
+	//Stmt* thenBranch = statement().release();
+	//Stmt* elseBranch = nullptr;
+
+	std::unique_ptr<Stmt> thenBranch = statement();
+	std::unique_ptr<Stmt> elseBranch = nullptr;
+
 	if (match(ELSE))
 	{
 		elseBranch = statement();
 	}
 
-	return new Stmt::If(condition, thenBranch, elseBranch);
+	//return new Stmt::If(condition, thenBranch, elseBranch);
+	return std::make_unique<Stmt::If>(condition, std::move(thenBranch), std::move(elseBranch));
 }
 
-Stmt* Parser::printStatement()
+std::unique_ptr<Stmt> Parser::printStatement()
 {
 	Expr* value = expression();
 	consume(SEMICOLON, "Expect ';' after value");
-	return new Stmt::Print(value);
+	//return new Stmt::Print(value);
+	return std::make_unique<Stmt::Print>(value);
 }
 
-Stmt* Parser::returnStatement()
+std::unique_ptr<Stmt> Parser::returnStatement()
 {
-	Token keyword = previous();
+	const Token keyword = previous();
 	Expr* value = nullptr;
 	if (!check(SEMICOLON))
 	{
@@ -176,48 +209,54 @@ Stmt* Parser::returnStatement()
 	}
 
 	consume(SEMICOLON, "Expect ';' after return value.");
-	return new Stmt::Return(keyword, value);
+	//return new Stmt::Return(keyword, value);
+	return std::make_unique<Stmt::Return>(keyword, value);
 }
 
-Stmt* Parser::varDeclaration()
+std::unique_ptr<Stmt> Parser::varDeclaration()
 {
 	const Token name = consume(IDENTIFIER, "Expect variable name.");
 
 	Expr* initializer = nullptr;
 	if (match(EQUAL)) initializer = expression();
 	consume(SEMICOLON, "Expect ';' after variable declaration.");
-	return new Stmt::Var(name, initializer);
+	//return new Stmt::Var(name, initializer);
+	return std::make_unique<Stmt::Var>(name, initializer);
 }
 
-Stmt* Parser::whileStatement()
+std::unique_ptr<Stmt> Parser::whileStatement()
 {
 	consume(LEFT_PAREN, "Expect '(' after 'while'.");
 	Expr* condition = expression();
-	consume(RIGHT_PAREN, "Expect '(' after condition");
-	Stmt* body = statement();
+	consume(RIGHT_PAREN, "Expect '(' after condition.");
+	//Stmt* body = statement().release();
+	std::unique_ptr<Stmt> body = statement();
 
-	return new Stmt::While(condition, body);
+	//return new Stmt::While(condition, body);
+	return std::make_unique<Stmt::While>(condition, std::move(body));
 }
 
-Stmt* Parser::expressionStatement()
+std::unique_ptr<Stmt> Parser::expressionStatement()
 {
 	Expr* expr = expression();
-	consume(SEMICOLON, "Expect ';' after value");
-	return new Stmt::Expression(expr);
+	consume(SEMICOLON, "Expect ';' after expression.");
+	//return new Stmt::Expression(expr);
+	return std::make_unique<Stmt::Expression>(expr);
 }
 
-Stmt::Function* Parser::function(const std::string& kind)
+//Stmt::Function Parser::function(const std::string& kind)
+std::unique_ptr<Stmt::Function> Parser::function(const std::string& kind)
 {
-	Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+	const Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
 	consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
 	std::vector<Token> parameters;
 	if (!check(RIGHT_PAREN))
 	{
 		do
 		{
-			if (parameters.size() >= 255)
+			if (parameters.size() >= 8)
 			{
-				error(peek(), "Can't have more than 255 parameters.");
+				error(peek(), "Cannot have more than 8 parameters.");
 			}
 			parameters.push_back(consume(IDENTIFIER, "Expect parameter name."));
 		} while (match(COMMA));
@@ -225,14 +264,18 @@ Stmt::Function* Parser::function(const std::string& kind)
 	consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
 	consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
-	std::vector<Stmt*> body = block();
+	std::vector<std::unique_ptr<Stmt>> body = block();
 
-	return new Stmt::Function(name, std::move(parameters), std::move(body));
+	//return new Stmt::Function(name, std::move(parameters), std::move(body));
+	return std::make_unique<Stmt::Function>(name, std::move(parameters), std::move(body));
+	//return {name, std::move(parameters), std::move(body)};
+
 }
 
-std::vector<Stmt*> Parser::block()
+//std::vector<Stmt*> Parser::block()
+std::vector<std::unique_ptr<Stmt>> Parser::block()
 {
-	std::vector<Stmt*> statements;
+	std::vector<std::unique_ptr<Stmt>> statements;
 
 	while (!check(RIGHT_BRACE) && !isAtEnd())
 	{
@@ -275,7 +318,7 @@ Expr* Parser::logicOr()
 {
 	Expr* expr = logicAnd();
 
-	if (match(OR))
+	while (match(OR))
 	{
 		const Token op = previous();
 		Expr* right = logicAnd();
@@ -373,12 +416,12 @@ Expr* Parser::finishCall(Expr* callee)
 	{
 		do
 		{
-			if (arguments.size() >= 255) { error(peek(), "Can't have more then 255 arguments."); }
+			if (arguments.size() >= 8) { error(peek(), "Cannot have more than 8 arguments."); }
 			arguments.push_back(expression());
 		} while (match(COMMA));
 	}
 
-	const Token paren = consume(RIGHT_PAREN, "Expect '(' after arguments.");
+	const Token paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
 
 	return new Expr::Call(callee, paren, std::move(arguments));
 }
@@ -420,9 +463,9 @@ Expr* Parser::primary()
 
 	if (match(SUPER))
 	{
-		Token keyword = previous();
+		const Token keyword = previous();
 		consume(DOT, "Expect '.' after 'super'.");
-		Token method = consume(IDENTIFIER, "Ex[ect superclass method name.");
+		const Token method = consume(IDENTIFIER, "Expect superclass method name.");
 		return new Expr::Super(keyword, method);
 	}
 
@@ -440,7 +483,7 @@ Expr* Parser::primary()
 		return new Expr::Grouping(expr);
 	}
 
-	throw error(peek(), "Expected expression.");
+	throw error(peek(), "Expect expression.");
 }
 
 
@@ -504,6 +547,8 @@ void Parser::synchronize()
 		case PRINT:
 		case RETURN:
 			return;
+		default:
+			break;
 		}
 
 		advance();
