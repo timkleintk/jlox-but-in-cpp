@@ -34,6 +34,10 @@ std::string toString(const object_t& o);
 
 bool isNull(const object_t& o);
 
+bool IsEqual(const object_t& a, const object_t& b);
+
+bool IsTruthy(const object_t& object);
+
 // implementations -------------------------------------------------
 
 #if defined(OBJECT_IS_ANY)

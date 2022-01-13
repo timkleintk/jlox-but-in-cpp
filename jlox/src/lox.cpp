@@ -1,13 +1,9 @@
-// https://craftinginterpreters.com/scanning.html#the-interpreter-framework
-
 #include "lox.h"
 
 #include <fstream>
 #include <iostream>
-#include <sstream>
-#include <vector>
+#include <stack>
 
-#include "astPrinter.h"
 #include "parser.h"
 #include "resolver.h"
 #include "RuntimeError.h"
@@ -185,7 +181,7 @@ void Lox::Run(const std::string& source)
 
 	// parse tokens
 	Parser parser(tokens);
-	const std::vector<std::shared_ptr<Stmt>> statements = parser.parse();
+	std::vector<std::shared_ptr<Stmt>> statements = parser.parse();
 
 	// debug print statements
 

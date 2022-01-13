@@ -17,12 +17,7 @@ std::vector<std::shared_ptr<Stmt>> Parser::parse()
 	std::vector<std::shared_ptr<Stmt>> statements;
 	while (!isAtEnd())
 	{
-		//statements.emplace_back(declaration()->getShared()); // nts: getShared?
-		std::shared_ptr<Stmt> stmt = declaration(); // nts: scuffed
-		if (stmt != nullptr)
-		{
-			statements.emplace_back(std::move(stmt));
-		}
+		statements.push_back(declaration());
 	}
 	return statements;
 }

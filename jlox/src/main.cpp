@@ -1,8 +1,7 @@
-// https://craftinginterpreters.com/scanning.html#the-interpreter-framework
-
 #include <iostream>
 
 #include "lox.h"
+
 
 int main(const int argc, char** argv)
 {
