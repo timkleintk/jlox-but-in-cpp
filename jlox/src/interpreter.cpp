@@ -50,20 +50,20 @@ bool IsEqual(const object_t& a, const object_t& b)
 	EqualCheck(bool);
 	EqualCheck(std::string);
 	EqualCheck(double);
-	//EqualCheck(LoxClass*);
+	EqualCheck(LoxClass*);
 	//EqualCheck(LoxInstance*);
 	//EqualCheck(LoxCallable*);
-	//EqualCheck(LoxFunction);
+	EqualCheck(LoxFunction);
 	
 
 	// bug: not fully implemented
-	printf("Warning: tried to compare two values of unknown type. Known types: nil, bool, string, number, class.\n");
+	std::cout << "Comparison between " << toString(a) << " and " << toString(b);
 
 	return false;
 }
 #undef EqualCheck
 
-void Interpreter::executeBlock(const std::vector<std::unique_ptr<Stmt>>& stmts, Environment* environment)
+void Interpreter::executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, Environment* environment)
 {
 	Environment* previous = m_environment;
 	m_environment = environment;
@@ -247,7 +247,7 @@ object_t Interpreter::visitSetExpr(Expr::Set& expr)
 
 object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 {
-	const int distance = locals.at(&expr);
+	const int distance = locals.at(expr.getShared());
 	const LoxClass* const superclass = as<LoxClass*>(m_environment->getAt(distance, "super"));
 
 	LoxInstance* instance = as<LoxInstance*>(m_environment->getAt(distance - 1, "this"));
@@ -263,7 +263,7 @@ object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 	//return as<LoxFunction*>(method)->bind(instance).release(); // nts: leak
 }
 
-object_t Interpreter::visitThisExpr(Expr::This& expr) { return lookUpVariable(expr.keyword, &expr); }
+object_t Interpreter::visitThisExpr(Expr::This& expr) { return lookUpVariable(expr.keyword, expr.getShared()); }
 
 object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 {
@@ -280,13 +280,13 @@ object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 
 }
 
-object_t Interpreter::visitVariableExpr(Expr::Variable& expr) { return lookUpVariable(expr.name, &expr); }
+object_t Interpreter::visitVariableExpr(Expr::Variable& expr) { return lookUpVariable(expr.name, expr.getShared()); }
 
 object_t Interpreter::visitAssignExpr(Expr::Assign& expr)
 {
 	object_t value = evaluate(expr.value);
 
-	const auto it = locals.find(&expr);
+	const auto it = locals.find(expr.getShared());
 	if (it != locals.end())
 	{
 		m_environment->assignAt(it->second, expr.name, value);
@@ -399,12 +399,13 @@ void Interpreter::visitWhileStmt(Stmt::While& stmt)
 	}
 }
 
-void Interpreter::resolve(const Expr* expr, int depth)
+void Interpreter::resolve(std::shared_ptr<Expr> expr, int depth)
 {
-	locals.insert_or_assign(expr, depth);
+	//locals.insert_or_assign(std::move(expr), depth);
+	locals.emplace(std::move(expr), depth);
 }
 
-object_t Interpreter::lookUpVariable(const Token& name, const Expr* expr)
+object_t Interpreter::lookUpVariable(const Token& name, const std::shared_ptr<Expr>& expr)
 {
 	if (const auto it = locals.find(expr); it != locals.end())
 	{ return m_environment->getAt(it->second, name.lexeme); }

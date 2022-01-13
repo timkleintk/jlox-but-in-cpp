@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-
+#include "object.h"
 class Interpreter;
 
 class LoxCallable

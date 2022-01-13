@@ -19,7 +19,7 @@ object_t Environment::get(const Token& name)
 {
 	// current scope
 	if (const auto& it = m_values.find(name.lexeme); it != m_values.end())
-	{ return std::move(it->second); }
+	{ return it->second; }
 
 	// enclosing scope
 	if (m_enclosing != nullptr)

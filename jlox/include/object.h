@@ -3,8 +3,8 @@
 #include <string>
 
 
-//#define OBJECT_IS_ANY
-#define OBJECT_IS_VARIANT
+#define OBJECT_IS_ANY
+//#define OBJECT_IS_VARIANT
 
 #if defined(OBJECT_IS_ANY)
 #include <any>

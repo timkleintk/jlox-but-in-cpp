@@ -5,34 +5,10 @@
 Resolver::Resolver(Interpreter& interpreter): m_interpreter(interpreter)
 {}
 
-void Resolver::resolve(const std::vector<std::unique_ptr<Stmt>>& stmts)
-{
-	for (const auto& stmt : stmts)
-	{
-		resolve(stmt.get());
-	}
-}
-
-void Resolver::resolve(const std::vector<std::shared_ptr<Stmt>>& stmts)
-{
-	for (const auto& stmt : stmts)
-	{
-		resolve(stmt.get());
-	}
-}
-
-void Resolver::resolve(const std::vector<Stmt*>& stmts)
-{
-	for (const auto& stmt : stmts)
-	{
-		resolve(stmt);
-	}
-}
-
 object_t Resolver::visitAssignExpr(Expr::Assign& expr)
 {
 	resolve(expr.value);
-	resolveLocal(&expr, expr.name);
+	resolveLocal(expr.getShared(), expr.name);
 	return {};
 }
 
@@ -96,7 +72,7 @@ object_t Resolver::visitSuperExpr(Expr::Super& expr)
 		Lox::Error(expr.keyword, "Cannot use 'super' in a class with no superclass.");
 	}
 
-	resolveLocal(&expr, expr.keyword);
+	resolveLocal(expr.getShared(), expr.keyword);
 	return {};
 }
 
@@ -107,7 +83,7 @@ object_t Resolver::visitThisExpr(Expr::This& expr)
 		Lox::Error(expr.keyword, "Cannot use 'this' outside of a class.");
 	}
 
-	resolveLocal(&expr, expr.keyword);
+	resolveLocal(expr.getShared(), expr.keyword);
 	return {};
 }
 
@@ -126,7 +102,7 @@ object_t Resolver::visitVariableExpr(Expr::Variable& expr)
 		Lox::Error(expr.name, "Cannot read local variable in its own initializer.");
 	}
 
-	resolveLocal(&expr, expr.name);
+	resolveLocal(expr.getShared(), expr.name);
 	return {};
 }
 
@@ -155,7 +131,7 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 		}
 		else
 		{
-			resolve(stmt.superclass.get());
+			resolve(stmt.superclass);
 
 			beginScope();
 			m_scopes.top().insert_or_assign("super", true);
@@ -181,7 +157,7 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 
 void Resolver::visitExpressionStmt(Stmt::Expression& stmt)
 {
-	resolve(stmt.expression.get());
+	resolve(stmt.expression);
 }
 
 void Resolver::visitFunctionStmt(Stmt::Function& stmt)
@@ -194,15 +170,15 @@ void Resolver::visitFunctionStmt(Stmt::Function& stmt)
 
 void Resolver::visitIfStmt(Stmt::If& stmt)
 {
-	resolve(stmt.condition.get());
-	resolve(stmt.thenBranch.get());
+	resolve(stmt.condition);
+	resolve(stmt.thenBranch);
 	if (stmt.elseBranch != nullptr)
-	{ resolve(stmt.elseBranch.get()); }
+	{ resolve(stmt.elseBranch); }
 }
 
 void Resolver::visitPrintStmt(Stmt::Print& stmt)
 {
-	resolve(stmt.expression.get());
+	resolve(stmt.expression);
 }
 
 void Resolver::visitReturnStmt(Stmt::Return& stmt)
@@ -216,7 +192,7 @@ void Resolver::visitReturnStmt(Stmt::Return& stmt)
 			Lox::Error(stmt.keyword, "Cannot return a value from an initializer.");
 		}
 
-		resolve(stmt.value.get());
+		resolve(stmt.value);
 	}
 }
 
@@ -225,7 +201,7 @@ void Resolver::visitVarStmt(Stmt::Var& stmt)
 	declare(stmt.name);
 	if (stmt.initializer != nullptr)
 	{
-		resolve(stmt.initializer.get());
+		resolve(stmt.initializer);
 	}
 	define(stmt.name);
 }
@@ -233,7 +209,7 @@ void Resolver::visitVarStmt(Stmt::Var& stmt)
 void Resolver::visitWhileStmt(Stmt::While& stmt)
 {
 	resolve(stmt.condition);
-	resolve(stmt.body.get());
+	resolve(stmt.body);
 }
 
 void Resolver::resolve(Stmt* stmt) { stmt->accept(this); }
@@ -284,13 +260,13 @@ void Resolver::define(const Token& name)
 	m_scopes.top().insert_or_assign(name.lexeme, true);
 }
 
-void Resolver::resolveLocal(const Expr* expr, const Token& name) const
+void Resolver::resolveLocal(std::shared_ptr<Expr> expr, const Token& name) const
 {
 	for (int i = static_cast<int>(m_scopes.size()) - 1; i >= 0; i--)
 	{
 		if (m_scopes._Get_container()[i].contains(name.lexeme))
 		{
-			m_interpreter.resolve(expr, static_cast<int>(m_scopes.size()) - 1 - i);
+			m_interpreter.resolve(std::move(expr), static_cast<int>(m_scopes.size()) - 1 - i);
 			return;
 		}
 	}

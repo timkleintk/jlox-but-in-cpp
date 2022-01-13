@@ -216,5 +216,10 @@ void Lox::PrintStatus()
 	m_interpreter.globals.debugPrint();
 
 	// locals
+	std::cout << "locals:\n";
+	for (const auto & [local, dist] : m_interpreter.locals)
+	{
+		std::cout << "[\"" << toString(local.get()) << "\"]: " << dist << "\n";
+	}
 }
 
