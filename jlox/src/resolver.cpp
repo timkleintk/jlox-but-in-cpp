@@ -13,6 +13,14 @@ void Resolver::resolve(const std::vector<std::unique_ptr<Stmt>>& stmts)
 	}
 }
 
+void Resolver::resolve(const std::vector<std::shared_ptr<Stmt>>& stmts)
+{
+	for (const auto& stmt : stmts)
+	{
+		resolve(stmt.get());
+	}
+}
+
 void Resolver::resolve(const std::vector<Stmt*>& stmts)
 {
 	for (const auto& stmt : stmts)
@@ -147,7 +155,7 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 		}
 		else
 		{
-			resolve(stmt.superclass);
+			resolve(stmt.superclass.get());
 
 			beginScope();
 			m_scopes.top().insert_or_assign("super", true);
@@ -173,7 +181,7 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 
 void Resolver::visitExpressionStmt(Stmt::Expression& stmt)
 {
-	resolve(stmt.expression);
+	resolve(stmt.expression.get());
 }
 
 void Resolver::visitFunctionStmt(Stmt::Function& stmt)
@@ -186,7 +194,7 @@ void Resolver::visitFunctionStmt(Stmt::Function& stmt)
 
 void Resolver::visitIfStmt(Stmt::If& stmt)
 {
-	resolve(stmt.condition);
+	resolve(stmt.condition.get());
 	resolve(stmt.thenBranch.get());
 	if (stmt.elseBranch != nullptr)
 	{ resolve(stmt.elseBranch.get()); }
@@ -194,7 +202,7 @@ void Resolver::visitIfStmt(Stmt::If& stmt)
 
 void Resolver::visitPrintStmt(Stmt::Print& stmt)
 {
-	resolve(stmt.expression);
+	resolve(stmt.expression.get());
 }
 
 void Resolver::visitReturnStmt(Stmt::Return& stmt)
@@ -208,7 +216,7 @@ void Resolver::visitReturnStmt(Stmt::Return& stmt)
 			Lox::Error(stmt.keyword, "Cannot return a value from an initializer.");
 		}
 
-		resolve(stmt.value);
+		resolve(stmt.value.get());
 	}
 }
 
@@ -217,7 +225,7 @@ void Resolver::visitVarStmt(Stmt::Var& stmt)
 	declare(stmt.name);
 	if (stmt.initializer != nullptr)
 	{
-		resolve(stmt.initializer);
+		resolve(stmt.initializer.get());
 	}
 	define(stmt.name);
 }

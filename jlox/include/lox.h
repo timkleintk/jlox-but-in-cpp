@@ -18,6 +18,8 @@ public:
 
 	static void runtimeError(const RuntimeError& error);
 
+	static void ResetInterpreter();
+
 private:
 	static Interpreter m_interpreter;
 
@@ -28,4 +30,5 @@ private:
 
 	static void Report(int line, const std::string& where, const std::string& message);
 
+	static void PrintStatus();
 };

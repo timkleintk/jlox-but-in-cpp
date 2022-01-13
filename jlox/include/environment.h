@@ -11,7 +11,7 @@ class Environment
 {
 public:
 	explicit Environment(Environment* enclosing = nullptr);
-
+	~Environment();
 
 	object_t get(const Token& name);
 
@@ -24,6 +24,8 @@ public:
 	void assign(const Token& name, const object_t& value);
 
 	Environment* getEnclosing() const { return m_enclosing; }
+
+	void debugPrint() const;
 
 private:
 	Environment& ancestor(int distance);

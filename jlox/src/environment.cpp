@@ -1,16 +1,25 @@
 #include "environment.h"
 
+#include <iostream>
+
 #include "lox.h"
 #include "RuntimeError.h"
 
 Environment::Environment(Environment* enclosing): m_enclosing(enclosing)
-{}
+{
+	
+}
+
+Environment::~Environment()
+{
+
+}
 
 object_t Environment::get(const Token& name)
 {
 	// current scope
 	if (const auto& it = m_values.find(name.lexeme); it != m_values.end())
-	{ return it->second; }
+	{ return std::move(it->second); }
 
 	// enclosing scope
 	if (m_enclosing != nullptr)
@@ -22,6 +31,21 @@ object_t Environment::get(const Token& name)
 void Environment::define(const std::string& name, const object_t& value)
 {
 	m_values.insert_or_assign(name, value);
+}
+
+void Environment::debugPrint() const
+{
+	if (m_enclosing)
+	{
+		m_enclosing->debugPrint();
+		std::cout << "^\n|\n";
+	}
+	std::cout << "Environment\n";
+
+	for (auto& [key, value] : m_values)
+	{
+		std::cout << "  [\"" << key << "\"]: " << toString(value) << "\n";
+	}
 }
 
 Environment& Environment::ancestor(const int distance)

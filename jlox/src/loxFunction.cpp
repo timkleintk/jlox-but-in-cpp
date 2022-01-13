@@ -6,8 +6,8 @@
 #include "interpreter.h"
 #include "return.h"
 
-LoxFunction::LoxFunction(const Stmt::Function* declaration, Environment* closure, const bool isInitializer):
-	m_declaration(declaration),
+LoxFunction::LoxFunction(std::shared_ptr<Stmt::Function> declaration, Environment* closure, const bool isInitializer):
+	m_declaration(std::move(declaration)),
 	m_closure(closure),
 	m_isInitializer(isInitializer)
 {}
@@ -21,12 +21,13 @@ bool LoxFunction::operator==(const LoxFunction& as) const
 	return as.getClosure() == m_closure && as.getDeclaration() == m_declaration;
 }
 
-// binds the "this" to the correct instance
+// returns a copy of the function with the "this" pointer bound
 LoxFunction LoxFunction::bind(LoxInstance* instance) const
 {
 	auto* environment = new Environment(m_closure);
 	environment->define("this", instance);
 	return {m_declaration, environment, m_isInitializer};
+	//return std::make_unique<LoxFunction>(m_declaration, m_closure, m_isInitializer);
 }
 
 object_t LoxFunction::call(Interpreter* interpreter, const std::vector<object_t> arguments) const

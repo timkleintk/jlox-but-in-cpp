@@ -11,6 +11,7 @@ class Resolver final : public Stmt::Visitor, public Expr::Visitor
 public:
 	explicit Resolver(Interpreter& interpreter);
 	void resolve(const std::vector<std::unique_ptr<Stmt>>& stmts);
+	void resolve(const std::vector<std::shared_ptr<Stmt>>& stmts);
 	void resolve(const std::vector<Stmt*>& stmts);
 
 #define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
@@ -38,6 +39,10 @@ private:
 
 	void resolve(Stmt* stmt);
 	void resolve(Expr* expr);
+
+	void resolve(const std::unique_ptr<Stmt>& stmt) { resolve(stmt.get()); }
+	void resolve(const std::unique_ptr<Expr>& expr) { resolve(expr.get()); }
+	
 	void resolveFunction(const Stmt::Function& function, FunctionType type);
 
 	void beginScope();

@@ -20,10 +20,10 @@ public:
 	explicit Parser(std::vector<Token> tokens): tokens(std::move(tokens))
 	{}
 
-	std::vector<Stmt*> parse();
+	std::vector<std::shared_ptr<Stmt>> parse();
 
 private:
-	Expr* expression();
+	std::unique_ptr<Expr> expression();
 	std::unique_ptr<Stmt> declaration();
 	std::unique_ptr<Stmt> classDeclaration();
 	std::unique_ptr<Stmt> statement();
@@ -36,23 +36,20 @@ private:
 	std::unique_ptr<Stmt> expressionStatement();
 	std::unique_ptr<Stmt::Function> function(const std::string& kind);
 	std::vector<std::unique_ptr<Stmt>> block();
-	Expr* assignment();
-	Expr* logicOr();
-	Expr* logicAnd();
-	Expr* equality();
-	Expr* comparison();
-	Expr* term();
-	Expr* factor();
-	Expr* unary();
-	Expr* finishCall(Expr* callee);
-	Expr* call();
-	Expr* primary();
+	std::unique_ptr<Expr> assignment();
+	std::unique_ptr<Expr> logicOr();
+	std::unique_ptr<Expr> logicAnd();
+	std::unique_ptr<Expr> equality();
+	std::unique_ptr<Expr> comparison();
+	std::unique_ptr<Expr> term();
+	std::unique_ptr<Expr> factor();
+	std::unique_ptr<Expr> unary();
+	std::unique_ptr<Expr> finishCall(std::unique_ptr<Expr> callee);
+	std::unique_ptr<Expr> call();
+	std::unique_ptr<Expr> primary();
 
-	template <typename T, typename ... Ts>
-	bool match(T head, Ts ... tail);
-
-	template <typename T>
-	bool match(T head);
+	template <typename ... Ts>
+	bool match(Ts ... args);
 
 	Token consume(TokenType type, const std::string& message);
 
@@ -71,26 +68,16 @@ private:
 };
 
 
-template <typename T, typename ... Ts>
-bool Parser::match(T head, Ts... tail)
+template <typename ... Ts>
+bool Parser::match(Ts... args)
 {
-	if (check(head))
+	for (const auto& t : {args...})
 	{
-		advance();
-		return true;
-	}
-	return match(tail...);
-}
-
-template <typename T>
-bool Parser::match(T head)
-{
-	if (check(head))
-	{
-		advance();
-		return true;
+		if (check(t))
+		{
+			advance();
+			return true;
+		}
 	}
 	return false;
 }
-
-

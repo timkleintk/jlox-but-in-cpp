@@ -7,7 +7,8 @@
 #include "loxFunction.h"
 #include "loxInstance.h"
 
-#if defined(OBJECT_IS_ANY)
+// nts: improve this
+//#if defined(OBJECT_IS_ANY)
 
 #define s(x) #x
 #define xstr(x) s(x )
@@ -62,4 +63,4 @@ std::string toString(const object_t& o)
 	return R"(<???>)";
 }
 
-#endif
+//#endif

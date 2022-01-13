@@ -10,6 +10,7 @@ public:
 	~Interpreter() override;
 
 	void interpret(const std::vector<Stmt*>& statements);
+	void interpret(const std::vector<std::shared_ptr<Stmt>>& statements);
 
 #define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
 	EXPR_TYPES;
@@ -30,8 +31,10 @@ private:
 	Environment* m_environment = nullptr;
 
 	object_t evaluate(Expr* expr);
+	object_t evaluate(const std::unique_ptr<Expr>& expr) { return evaluate(expr.get()); }
 
 	void execute(Stmt* stmt);
+	void execute(const std::unique_ptr<Stmt>& stmt) { execute(stmt.get()); }
 };
 
 
@@ -46,7 +49,7 @@ private:
 
 inline bool IsTruthy(const object_t& object)
 {
-	if (!object.has_value()) return false;
+	if (isNull(object)) return false;
 	if (is<bool>(object)) return as<bool>(object);
 	return true;
 }
