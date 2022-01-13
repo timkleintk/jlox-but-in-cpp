@@ -10,6 +10,7 @@ public:
 	~Interpreter() override;
 
 	void interpret(const std::vector<Stmt*>& statements);
+	void interpret(const std::vector<std::shared_ptr<Stmt>>& statements);
 
 #define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
 	EXPR_TYPES;
@@ -18,20 +19,24 @@ public:
 	STMT_TYPES;
 #undef TYPE
 
-	void resolve(const Expr* expr, int depth);
-	object_t lookUpVariable(const Token& name, const Expr* expr);
+	void resolve(std::shared_ptr<Expr> expr, int depth);
+	object_t lookUpVariable(const Token& name, const std::shared_ptr<Expr>& expr);
 
-	void executeBlock(const std::vector<std::unique_ptr<Stmt>>& stmts, Environment* environment);
+	void executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, Environment* environment);
 
 	Environment globals;
-	std::unordered_map<const Expr*, int> locals;
+	std::unordered_map<std::shared_ptr<Expr>, int> locals; // nts: is shared_ptr<Expr> the right type here?
 private:
 
 	Environment* m_environment = nullptr;
 
 	object_t evaluate(Expr* expr);
+	object_t evaluate(const std::unique_ptr<Expr>& expr) { return evaluate(expr.get()); }
+	object_t evaluate(const std::shared_ptr<Expr>& expr) { return evaluate(expr.get()); }
 
 	void execute(Stmt* stmt);
+	void execute(const std::unique_ptr<Stmt>& stmt) { execute(stmt.get()); }
+	void execute(const std::shared_ptr<Stmt>& stmt) { execute(stmt.get()); }
 };
 
 
@@ -46,7 +51,7 @@ private:
 
 inline bool IsTruthy(const object_t& object)
 {
-	if (!object.has_value()) return false;
+	if (isNull(object)) return false;
 	if (is<bool>(object)) return as<bool>(object);
 	return true;
 }

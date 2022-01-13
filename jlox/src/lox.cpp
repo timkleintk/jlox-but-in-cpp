@@ -114,7 +114,7 @@ void Lox::RunPrompt(const bool qualityOfLife)
 		// special commands
 		if (std::cin.eof() || source == "exit") { break; }
 		if (source == "clear") { system("CLS"); continue; }
-		//if (source == "tests") { RunTests(); }
+		if (source == "status") { PrintStatus(); continue; }
 
 		// multiline inputs
 		while (!IsSourceComplete(source))
@@ -154,6 +154,11 @@ void Lox::runtimeError(const RuntimeError& error)
 	m_hadRuntimeError = true;
 }
 
+void Lox::ResetInterpreter()
+{
+	m_interpreter = Interpreter();
+}
+
 void Lox::Error(const Token& token, const std::string& message)
 {
 	if (token.type == END_OF_FILE)
@@ -175,11 +180,14 @@ bool Lox::m_hadRuntimeError = false;
 void Lox::Run(const std::string& source)
 {
 	// tokenize string
+
 	const std::vector<Token> tokens = ScanTokens(source);
 
 	// parse tokens
 	Parser parser(tokens);
-	std::vector<Stmt*> statements = parser.parse();
+	const std::vector<std::shared_ptr<Stmt>> statements = parser.parse();
+
+	// debug print statements
 
 	// Stop if there was a syntax error.
 	if (m_hadError) { return; }
@@ -197,12 +205,21 @@ void Lox::Run(const std::string& source)
 
 void Lox::Report(const int line, const std::string& where, const std::string& message)
 {
-	(void)line;
-	//*m_errorstream << "[line " << line << "] Error" << where << ": " << message << std::endl;
-	//std::cout << "[line " << line << "] Error" << where << ": " << message << std::endl;
 	std::cerr << "[line " << line << "] Error" << where << ": " << message << "\n";
-	//std::cout << "Error" << where << ": " << message << "\n";
-	//std::cerr << "Error" << where << ": " << message << "\n";
 	m_hadError = true;
+}
+
+void Lox::PrintStatus()
+{
+	
+	// globals
+	m_interpreter.globals.debugPrint();
+
+	// locals
+	std::cout << "locals:\n";
+	for (const auto & [local, dist] : m_interpreter.locals)
+	{
+		std::cout << "[\"" << toString(local.get()) << "\"]: " << dist << "\n";
+	}
 }
 

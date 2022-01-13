@@ -10,8 +10,13 @@ class Resolver final : public Stmt::Visitor, public Expr::Visitor
 {
 public:
 	explicit Resolver(Interpreter& interpreter);
-	void resolve(const std::vector<std::unique_ptr<Stmt>>& stmts);
-	void resolve(const std::vector<Stmt*>& stmts);
+
+	template <typename T>
+	void resolve(const std::vector<T>& stmts)
+	{
+		for (const auto& stmt : stmts)
+			resolve(stmt);
+	}
 
 #define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
 	EXPR_TYPES;
@@ -37,14 +42,22 @@ private:
 	};
 
 	void resolve(Stmt* stmt);
+	void resolve(const std::shared_ptr<Stmt>& stmt) { resolve(stmt.get()); }
+	void resolve(const std::unique_ptr<Stmt>& stmt) { resolve(stmt.get()); }
+
 	void resolve(Expr* expr);
+	void resolve(const std::shared_ptr<Expr>& expr) { resolve(expr.get()); }
+	void resolve(const std::unique_ptr<Expr>& expr) { resolve(expr.get()); }
+	
 	void resolveFunction(const Stmt::Function& function, FunctionType type);
 
 	void beginScope();
 	void endScope();
 	void declare(const Token& name);
 	void define(const Token& name);
-	void resolveLocal(const Expr* expr, const Token& name) const;
+
+	// resolve a l-value
+	void resolveLocal(std::shared_ptr<Expr> expr, const Token& name) const;
 
 	Interpreter& m_interpreter;
 	std::stack<std::unordered_map<std::string, bool>> m_scopes;

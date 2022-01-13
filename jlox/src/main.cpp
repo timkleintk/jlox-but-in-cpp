@@ -30,6 +30,8 @@ int main(const int argc, char** argv)
 		Lox::RunPrompt();
 	}
 
+	Lox::ResetInterpreter();
+
 	return 0;
 }
 

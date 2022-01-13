@@ -29,7 +29,8 @@ Interpreter::Interpreter(): m_environment(&globals)
 
 Interpreter::~Interpreter()
 {
-	assert(m_environment == &globals);
+	// nts: is this assert even useful?
+	//assert(m_environment == &globals);
 }
 
 object_t Interpreter::evaluate(Expr* expr) { return expr->accept(this); }
@@ -39,27 +40,30 @@ void Interpreter::execute(Stmt* stmt) { stmt->accept(this); }
 #define EqualCheck(T) if (is<T>(a)) return as<T>(a) == as<T>(b) 
 bool IsEqual(const object_t& a, const object_t& b)
 {
-	if (!a.has_value() && !b.has_value()) { return true; } // if both nil
-	if (!a.has_value()) { return false; }                  // if only one operand is nil
+	if (isNull(a) && isNull(b)) { return true; } // if both nil
+	if (isNull(a)) { return false; }                  // if only one operand is nil
+#if defined(OBJECT_IS_ANY)
 	if (a.type() != b.type()) { return false; }            // a and b should be the same type
-
+#elif defined(OBJECT_IS_VARIANT)
+	if (a.index() != b.index()) { return false; }
+#endif
 	EqualCheck(bool);
 	EqualCheck(std::string);
 	EqualCheck(double);
 	EqualCheck(LoxClass*);
-	EqualCheck(LoxInstance*);
-	EqualCheck(LoxCallable*);
+	//EqualCheck(LoxInstance*);
+	//EqualCheck(LoxCallable*);
 	EqualCheck(LoxFunction);
 	
 
 	// bug: not fully implemented
-	printf("Warning: tried to compare two values of unknown type. Known types: nil, bool, string, number, class.\n");
+	std::cout << "Comparison between " << toString(a) << " and " << toString(b);
 
 	return false;
 }
 #undef EqualCheck
 
-void Interpreter::executeBlock(const std::vector<std::unique_ptr<Stmt>>& stmts, Environment* environment)
+void Interpreter::executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, Environment* environment)
 {
 	Environment* previous = m_environment;
 	m_environment = environment;
@@ -88,6 +92,21 @@ void Interpreter::interpret(const std::vector<Stmt*>& statements)
 		for (const auto& statement : statements)
 		{
 			execute(statement);
+		}
+	}
+	catch (RuntimeError& error)
+	{
+		Lox::runtimeError(error);
+	}
+}
+
+void Interpreter::interpret(const std::vector<std::shared_ptr<Stmt>>& statements)
+{
+	try
+	{
+		for (const auto& statement : statements)
+		{
+			execute(statement.get());
 		}
 	}
 	catch (RuntimeError& error)
@@ -163,12 +182,12 @@ object_t Interpreter::visitCallExpr(Expr::Call& expr)
 	}
 
 	LoxCallable* callable = nullptr;
+	LoxFunction func(nullptr, nullptr, false); // for if the returnvalue callee turns out to be a function instance
 	// nts: make this more robust
 	if (is<LoxCallable*>(callee)) { callable = as<LoxCallable*>(callee); }
 	//else if (is<LoxFunction*>(callee)) { callable = as<LoxFunction*>(callee); }
 	else if (is<LoxClass*>(callee)) { callable = as<LoxClass*>(callee); }
-												// nts: leak
-	else if (is<LoxFunction>(callee)) { callable = new LoxFunction(as<LoxFunction>(callee)); }
+	else if (is<LoxFunction>(callee)) { callable = &func; func = as<LoxFunction>(callee); }
 
 	if (callable == nullptr)
 	{ throw RuntimeError(expr.paren, "Can only call functions and classes."); }
@@ -228,20 +247,23 @@ object_t Interpreter::visitSetExpr(Expr::Set& expr)
 
 object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 {
-	const int distance = locals.at(&expr);
+	const int distance = locals.at(expr.getShared());
 	const LoxClass* const superclass = as<LoxClass*>(m_environment->getAt(distance, "super"));
 
 	LoxInstance* instance = as<LoxInstance*>(m_environment->getAt(distance - 1, "this"));
 
-	const object_t method = superclass->findMethod(expr.method.lexeme);
+	const auto method = superclass->findMethod(expr.method.lexeme);
 
-	if (isNull(method))
+	// nts: has_value() for expressiveness?
+	if (!method.has_value())
 	{ throw RuntimeError(expr.method, "Undefined property '" + expr.method.lexeme + "'."); }
 
-	return {as<LoxFunction>(method).bind(instance)};
+
+	return {method->bind(instance)};
+	//return as<LoxFunction*>(method)->bind(instance).release(); // nts: leak
 }
 
-object_t Interpreter::visitThisExpr(Expr::This& expr) { return lookUpVariable(expr.keyword, &expr); }
+object_t Interpreter::visitThisExpr(Expr::This& expr) { return lookUpVariable(expr.keyword, expr.getShared()); }
 
 object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 {
@@ -258,13 +280,13 @@ object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 
 }
 
-object_t Interpreter::visitVariableExpr(Expr::Variable& expr) { return lookUpVariable(expr.name, &expr); }
+object_t Interpreter::visitVariableExpr(Expr::Variable& expr) { return lookUpVariable(expr.name, expr.getShared()); }
 
 object_t Interpreter::visitAssignExpr(Expr::Assign& expr)
 {
 	object_t value = evaluate(expr.value);
 
-	const auto it = locals.find(&expr);
+	const auto it = locals.find(expr.getShared());
 	if (it != locals.end())
 	{
 		m_environment->assignAt(it->second, expr.name, value);
@@ -285,11 +307,12 @@ void Interpreter::visitBlockStmt(Stmt::Block& stmt)
 
 void Interpreter::visitClassStmt(Stmt::Class& stmt)
 {
+	// nts: this might be buggy
 	LoxClass* superclass = nullptr;
 
 	if (stmt.superclass != nullptr)
 	{
-		const object_t lc = evaluate(stmt.superclass);
+		const object_t lc = evaluate(stmt.superclass.get());
 		if (!is<LoxClass*>(lc))
 		{
 			throw RuntimeError(stmt.superclass->name, "Superclass must be a class.");
@@ -299,7 +322,7 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 
 	m_environment->define(stmt.name.lexeme, {});
 
-	if (stmt.superclass != nullptr)
+	if (stmt.superclass != nullptr) // nts: same if as in line 310
 	{
 		m_environment = new Environment(m_environment);
 		m_environment->define("super", superclass);
@@ -308,8 +331,10 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 	std::unordered_map<std::string, LoxFunction> methods;
 	for (const auto& method : stmt.methods)
 	{
-		LoxFunction function(method.get(), m_environment, method->name.lexeme == "init");
-		methods.insert_or_assign(method->name.lexeme, function);
+		//auto p = std::dynamic_pointer_cast<Stmt::Function>(method->getShared());
+		//auto p = method->getShared();
+		LoxFunction function(method, m_environment, method->name.lexeme == "init");
+		methods.insert_or_assign(method->name.lexeme, std::move(function));
 	}
 
 	if (superclass != nullptr)
@@ -322,17 +347,17 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 	m_environment->assign(stmt.name, object_t(new LoxClass(stmt.name.lexeme, superclass, std::move(methods))));
 }
 
-void Interpreter::visitExpressionStmt(Stmt::Expression& stmt) { evaluate(stmt.expression); }
+void Interpreter::visitExpressionStmt(Stmt::Expression& stmt) { evaluate(stmt.expression.get()); }
 
 void Interpreter::visitFunctionStmt(Stmt::Function& stmt)
 {
 	// nts: leak
-	m_environment->define(stmt.name.lexeme, object_t(static_cast<LoxCallable*>(new LoxFunction(&stmt, m_environment, false))));
+	m_environment->define(stmt.name.lexeme, object_t(static_cast<LoxCallable*>(new LoxFunction(stmt.getShared(), m_environment, false))));
 }
 
 void Interpreter::visitIfStmt(Stmt::If& stmt)
 {
-	if (IsTruthy(evaluate(stmt.condition)))
+	if (IsTruthy(evaluate(stmt.condition.get())))
 	{
 		execute(stmt.thenBranch.get());
 	}
@@ -344,14 +369,14 @@ void Interpreter::visitIfStmt(Stmt::If& stmt)
 
 void Interpreter::visitPrintStmt(Stmt::Print& stmt)
 {
-	const object_t value = evaluate(stmt.expression);
+	const object_t value = evaluate(stmt.expression.get());
 	std::cout << toString(value) << std::endl;
 }
 
 void Interpreter::visitReturnStmt(Stmt::Return& stmt)
 {
 	object_t value = {};
-	if (stmt.value != nullptr) { value = evaluate(stmt.value); }
+	if (stmt.value != nullptr) { value = evaluate(stmt.value.get()); }
 
 	throw Return(value);
 }
@@ -361,25 +386,26 @@ void Interpreter::visitVarStmt(Stmt::Var& stmt)
 	object_t value = {};
 	if (stmt.initializer != nullptr)
 	{
-		value = evaluate(stmt.initializer);
+		value = evaluate(stmt.initializer.get());
 	}
 	m_environment->define(stmt.name.lexeme, value);
 }
 
 void Interpreter::visitWhileStmt(Stmt::While& stmt)
 {
-	while (IsTruthy(evaluate(stmt.condition)))
+	while (IsTruthy(evaluate(stmt.condition.get())))
 	{
 		execute(stmt.body.get());
 	}
 }
 
-void Interpreter::resolve(const Expr* expr, int depth)
+void Interpreter::resolve(std::shared_ptr<Expr> expr, int depth)
 {
-	locals.insert_or_assign(expr, depth);
+	//locals.insert_or_assign(std::move(expr), depth);
+	locals.emplace(std::move(expr), depth);
 }
 
-object_t Interpreter::lookUpVariable(const Token& name, const Expr* expr)
+object_t Interpreter::lookUpVariable(const Token& name, const std::shared_ptr<Expr>& expr)
 {
 	if (const auto it = locals.find(expr); it != locals.end())
 	{ return m_environment->getAt(it->second, name.lexeme); }

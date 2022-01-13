@@ -2,7 +2,6 @@
 
 #pragma once
 #include <memory>
-#include <utility>
 #include <vector>
 
 #include "expr.h"
@@ -17,45 +16,40 @@ public:
 	std::vector<Token> tokens;
 	int current = 0;
 
-	explicit Parser(std::vector<Token> tokens): tokens(std::move(tokens))
-	{}
+	explicit Parser(std::vector<Token> tokens);
 
-	std::vector<Stmt*> parse();
+	std::vector<std::shared_ptr<Stmt>> parse();
 
 private:
-	Expr* expression();
-	std::unique_ptr<Stmt> declaration();
-	std::unique_ptr<Stmt> classDeclaration();
-	std::unique_ptr<Stmt> statement();
-	std::unique_ptr<Stmt> forStatement();
-	std::unique_ptr<Stmt> ifStatement();
-	std::unique_ptr<Stmt> printStatement();
-	std::unique_ptr<Stmt> returnStatement();
-	std::unique_ptr<Stmt> varDeclaration();
-	std::unique_ptr<Stmt> whileStatement();
-	std::unique_ptr<Stmt> expressionStatement();
-	std::unique_ptr<Stmt::Function> function(const std::string& kind);
-	std::vector<std::unique_ptr<Stmt>> block();
-	Expr* assignment();
-	Expr* logicOr();
-	Expr* logicAnd();
-	Expr* equality();
-	Expr* comparison();
-	Expr* term();
-	Expr* factor();
-	Expr* unary();
-	Expr* finishCall(Expr* callee);
-	Expr* call();
-	Expr* primary();
+	std::shared_ptr<Expr> expression();
+	std::shared_ptr<Stmt> declaration();
+	std::shared_ptr<Stmt> classDeclaration();
+	std::shared_ptr<Stmt> statement();
+	std::shared_ptr<Stmt> forStatement();
+	std::shared_ptr<Stmt> ifStatement();
+	std::shared_ptr<Stmt> printStatement();
+	std::shared_ptr<Stmt> returnStatement();
+	std::shared_ptr<Stmt> varDeclaration();
+	std::shared_ptr<Stmt> whileStatement();
+	std::shared_ptr<Stmt> expressionStatement();
+	std::shared_ptr<Stmt::Function> function(const std::string& kind);
+	std::vector<std::shared_ptr<Stmt>> block();
+	std::shared_ptr<Expr> assignment();
+	std::shared_ptr<Expr> logicOr();
+	std::shared_ptr<Expr> logicAnd();
+	std::shared_ptr<Expr> equality();
+	std::shared_ptr<Expr> comparison();
+	std::shared_ptr<Expr> term();
+	std::shared_ptr<Expr> factor();
+	std::shared_ptr<Expr> unary();
+	std::shared_ptr<Expr> finishCall(std::shared_ptr<Expr> callee);
+	std::shared_ptr<Expr> call();
+	std::shared_ptr<Expr> primary();
 
-	template <typename T, typename ... Ts>
-	bool match(T head, Ts ... tail);
-
-	template <typename T>
-	bool match(T head);
+	template <typename ... Ts>
+	bool match(Ts ... args);
 
 	Token consume(TokenType type, const std::string& message);
-
 
 	bool check(TokenType type);
 	Token advance();
@@ -63,34 +57,21 @@ private:
 	Token peek();
 	Token previous();
 
-
-	class ParseError final : public std::exception {};
-
 	ParseError error(const Token& token, const std::string& message) const;
 	void synchronize();
 };
 
 
-template <typename T, typename ... Ts>
-bool Parser::match(T head, Ts... tail)
+template <typename ... Ts>
+bool Parser::match(Ts... args)
 {
-	if (check(head))
+	for (const auto& t : {args...})
 	{
-		advance();
-		return true;
-	}
-	return match(tail...);
-}
-
-template <typename T>
-bool Parser::match(T head)
-{
-	if (check(head))
-	{
-		advance();
-		return true;
+		if (check(t))
+		{
+			advance();
+			return true;
+		}
 	}
 	return false;
 }
-
-
