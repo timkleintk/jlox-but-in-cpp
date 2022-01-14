@@ -19,7 +19,7 @@ public:
 	{
 		return static_cast<double>(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 	}
-	[[nodiscard]] int arity() const override { return 0; }
+	[[nodiscard]] size_t arity() const override { return 0; }
 };
 
 
@@ -136,7 +136,7 @@ object_t Interpreter::visitCallExpr(Expr::Call& expr)
 	if (callable == nullptr)
 	{ throw RuntimeError(expr.paren, "Can only call functions and classes."); }
 
-	if (static_cast<int>(arguments.size()) != callable->arity())
+	if (arguments.size() != callable->arity())
 	{
 		throw RuntimeError(std::move(expr.paren), "Expected " + std::to_string(callable->arity()) + " arguments but got " + std::to_string(arguments.size()) + ".");
 	}
@@ -191,7 +191,7 @@ object_t Interpreter::visitSetExpr(Expr::Set& expr)
 
 object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 {
-	const int distance = locals.at(expr.getShared());
+	const size_t distance = locals.at(expr.getShared());
 	const LoxClass* const superclass = as<LoxClass*>(m_environment->getAt(distance, "super"));
 
 	LoxInstance* instance = as<LoxInstance*>(m_environment->getAt(distance - 1, "this"));
@@ -326,7 +326,7 @@ void Interpreter::visitWhileStmt(Stmt::While& stmt)
 }
 
 
-void Interpreter::resolve(std::shared_ptr<Expr> expr, int depth)
+void Interpreter::resolve(std::shared_ptr<Expr> expr, size_t depth)
 { locals.emplace(std::move(expr), depth); }
 
 object_t Interpreter::lookUpVariable(const Token& name, const std::shared_ptr<Expr>& expr)

@@ -3,7 +3,7 @@
 #include "lox.h"
 
 
-Parser::Parser(std::vector<Token> tokens): tokens(std::move(tokens))
+Parser::Parser(const std::vector<Token>& tokens): m_tokens(tokens)
 {}
 
 std::vector<std::shared_ptr<Stmt>> Parser::parse()
@@ -482,7 +482,7 @@ Token Parser::consume(const TokenType type, const std::string& message)
 	throw error(peek(), message);
 }
 
-bool Parser::check(const TokenType type)
+bool Parser::check(const TokenType type) const
 {
 	if (isAtEnd()) return false;
 	return peek().type == type;
@@ -490,23 +490,23 @@ bool Parser::check(const TokenType type)
 
 Token Parser::advance()
 {
-	if (!isAtEnd()) current++;
+	if (!isAtEnd()) m_current++;
 	return previous();
 }
 
-bool Parser::isAtEnd()
+bool Parser::isAtEnd() const
 {
 	return peek().type == END_OF_FILE;
 }
 
-Token Parser::peek()
+Token Parser::peek() const
 {
-	return tokens.at(current);
+	return m_tokens.at(m_current);
 }
 
-Token Parser::previous()
+Token Parser::previous() const
 {
-	return tokens.at(static_cast<size_t>(current) - 1);
+	return m_tokens.at(m_current - 1);
 }
 
 

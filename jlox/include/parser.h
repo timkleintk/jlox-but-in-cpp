@@ -13,7 +13,7 @@ class ParseError final : public std::exception {};
 class Parser
 {
 public:
-	explicit Parser(std::vector<Token> tokens);
+	explicit Parser(const std::vector<Token>& tokens);
 
 	std::vector<std::shared_ptr<Stmt>> parse();
 
@@ -48,17 +48,17 @@ private:
 	bool match(Ts ... args);
 
 	Token consume(TokenType type, const std::string& message);
-	bool check(TokenType type);
+	bool check(TokenType type) const;
 	Token advance();
-	bool isAtEnd();
-	Token peek();
-	Token previous();
+	bool isAtEnd() const;
+	Token peek() const;
+	Token previous() const;
 
 	ParseError error(const Token& token, const std::string& message) const;
 	void synchronize();
 
-	std::vector<Token> tokens;
-	int current = 0;
+	const std::vector<Token>& m_tokens;
+	size_t m_current = 0;
 };
 
 

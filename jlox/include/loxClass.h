@@ -25,7 +25,7 @@ public:
 
 	object_t call(Interpreter* interpreter, std::vector<object_t> arguments) const override;
 
-	[[nodiscard]] int arity() const override;
+	[[nodiscard]] size_t arity() const override;
 private:
 	std::unordered_map<std::string, LoxFunction> m_methods;
 };

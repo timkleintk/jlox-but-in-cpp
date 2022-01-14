@@ -139,7 +139,7 @@ void Lox::RunPrompt(const bool qualityOfLife)
 	} while (true);
 }
 
-void Lox::Error(const int line, const std::string& message)
+void Lox::Error(const size_t line, const std::string& message)
 {
 	Report(line, "", message);
 }
@@ -176,14 +176,12 @@ bool Lox::m_hadRuntimeError = false;
 void Lox::Run(const std::string& source)
 {
 	// tokenize string
-
-	const std::vector<Token> tokens = ScanTokens(source);
+	Scanner scanner(source);
+	const std::vector<Token> tokens = scanner.scan();
 
 	// parse tokens
 	Parser parser(tokens);
-	std::vector<std::shared_ptr<Stmt>> statements = parser.parse();
-
-	// debug print statements
+	const std::vector<std::shared_ptr<Stmt>> statements = parser.parse();
 
 	// Stop if there was a syntax error.
 	if (m_hadError) { return; }
@@ -199,7 +197,7 @@ void Lox::Run(const std::string& source)
 	m_interpreter.interpret(statements);
 }
 
-void Lox::Report(const int line, const std::string& where, const std::string& message)
+void Lox::Report(const size_t line, const std::string& where, const std::string& message)
 {
 	std::cerr << "[line " << line << "] Error" << where << ": " << message << "\n";
 	m_hadError = true;

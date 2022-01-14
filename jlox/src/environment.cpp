@@ -11,9 +11,7 @@ Environment::Environment(Environment* enclosing): m_enclosing(enclosing)
 }
 
 Environment::~Environment()
-{
-
-}
+= default;
 
 object_t Environment::get(const Token& name)
 {
@@ -48,22 +46,22 @@ void Environment::debugPrint() const
 	}
 }
 
-Environment& Environment::ancestor(const int distance)
+Environment& Environment::ancestor(const size_t distance)
 {
 	Environment* environment = this;
-	for (int i = 0; i < distance; i++)
+	for (size_t i = 0; i < distance; i++)
 	{
 		environment = environment->m_enclosing;
 	}
 	return *environment;
 }
 
-object_t Environment::getAt(const int distance, const std::string& name)
+object_t Environment::getAt(const size_t distance, const std::string& name)
 {
 	return ancestor(distance).m_values.at(name);
 }
 
-void Environment::assignAt(const int distance, const Token& name, const object_t& value)
+void Environment::assignAt(const size_t distance, const Token& name, const object_t& value)
 {
 	ancestor(distance).m_values.insert_or_assign(name.lexeme, value);
 }

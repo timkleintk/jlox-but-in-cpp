@@ -48,14 +48,8 @@
     <ClCompile Include="src\scanner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\token.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\astPrinter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\environment.h">
       <Filter>Header Files</Filter>
     </ClInclude>

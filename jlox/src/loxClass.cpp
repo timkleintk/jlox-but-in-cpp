@@ -47,7 +47,7 @@ object_t LoxClass::call(Interpreter * interpreter, const std::vector<object_t> a
 	return {instance};
 }
 
-int LoxClass::arity() const
+size_t LoxClass::arity() const
 {
 	if (const auto initializer = findMethod("init"); initializer.has_value())
 	{ return initializer->arity(); }

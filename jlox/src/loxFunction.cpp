@@ -54,7 +54,7 @@ object_t LoxFunction::call(Interpreter* interpreter, const std::vector<object_t>
 	return {};
 }
 
-int LoxFunction::arity() const
+size_t LoxFunction::arity() const
 {
-	return static_cast<int>(m_declaration->params.size());
+	return m_declaration->params.size();
 }

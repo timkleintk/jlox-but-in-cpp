@@ -25,16 +25,18 @@ enum TokenType
 };
 
 
-
 class Token
 {
 public:
-	Token(TokenType type, std::string lexeme, object_t literal, int line);
+	Token(const TokenType type, std::string lexeme, object_t literal, const size_t line) :
+		type(type),
+		lexeme(std::move(lexeme)),
+		literal(std::move(literal)),
+		line(line)
+	{}
 
 	TokenType type;
 	std::string lexeme;
 	object_t literal;
-	int line;
+	size_t line;
 };
-
-//std::ostream& operator<<(std::ostream& os, const Token& token);

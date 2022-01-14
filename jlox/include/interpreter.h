@@ -20,13 +20,13 @@ public:
 	STMT_TYPES;
 #undef TYPE
 
-	void resolve(std::shared_ptr<Expr> expr, int depth);
+	void resolve(std::shared_ptr<Expr> expr, size_t depth);
 	object_t lookUpVariable(const Token& name, const std::shared_ptr<Expr>& expr);
 
 	void executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, Environment* environment);
 
 	Environment globals;
-	std::unordered_map<std::shared_ptr<Expr>, int> locals; // nts: make it weak pointer?
+	std::unordered_map<std::shared_ptr<Expr>, size_t> locals; // nts: make it weak pointer?
 private:
 
 	Environment* m_environment = nullptr;

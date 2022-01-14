@@ -279,11 +279,11 @@ void Resolver::define(const Token& name)
 
 void Resolver::resolveLocal(std::shared_ptr<Expr> expr, const Token& name) const
 {
-	for (int i = static_cast<int>(m_scopes.size()) - 1; i >= 0; i--)
+	for (size_t i = m_scopes.size(); i --> 0; ) // loops from m_scopes.size() - 1 to 0
 	{
 		if (m_scopes._Get_container()[i].contains(name.lexeme))
 		{
-			m_interpreter.resolve(std::move(expr), static_cast<int>(m_scopes.size()) - 1 - i);
+			m_interpreter.resolve(std::move(expr), m_scopes.size() - 1 - i);
 			return;
 		}
 	}

@@ -17,9 +17,9 @@ public:
 
 	void define(const std::string& name, const object_t& value);
 
-	object_t getAt(int distance, const std::string& name);
+	object_t getAt(size_t distance, const std::string& name);
 
-	void assignAt(int distance, const Token& name, const object_t& value);
+	void assignAt(const size_t distance, const Token& name, const object_t& value);
 
 	void assign(const Token& name, const object_t& value);
 
@@ -28,7 +28,7 @@ public:
 	void debugPrint() const;
 
 private:
-	Environment& ancestor(int distance);
+	Environment& ancestor(const size_t distance);
 
 	Environment* m_enclosing = nullptr;
 	std::unordered_map<std::string, object_t> m_values;

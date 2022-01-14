@@ -23,7 +23,7 @@ public:
 	LoxFunction bind(LoxInstance* instance) const;
 
 	object_t call(Interpreter* interpreter, std::vector<object_t> arguments) const override;
-	int arity() const override;
+	size_t arity() const override;
 
 	auto getDeclaration() const { return m_declaration; }
 	auto getClosure() const { return m_closure; }

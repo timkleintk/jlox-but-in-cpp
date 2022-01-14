@@ -100,10 +100,8 @@
     <ClCompile Include="src\parser.cpp" />
     <ClCompile Include="src\resolver.cpp" />
     <ClCompile Include="src\scanner.cpp" />
-    <ClCompile Include="src\token.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\astPrinter.h" />
     <ClInclude Include="include\environment.h" />
     <ClInclude Include="include\expr.h" />
     <ClInclude Include="include\interpreter.h" />
