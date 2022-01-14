@@ -2,8 +2,9 @@
 
 #include "lox.h"
 
-Resolver::Resolver(Interpreter& interpreter): m_interpreter(interpreter)
+Resolver::Resolver(Interpreter& interpreter) : m_interpreter(interpreter)
 {}
+
 
 object_t Resolver::visitAssignExpr(Expr::Assign& expr)
 {
@@ -11,6 +12,9 @@ object_t Resolver::visitAssignExpr(Expr::Assign& expr)
 	resolveLocal(expr.getShared(), expr.name);
 	return {};
 }
+
+
+// expressions -----------------------------------------------------
 
 object_t Resolver::visitBinaryExpr(Expr::Binary& expr)
 {
@@ -106,6 +110,9 @@ object_t Resolver::visitVariableExpr(Expr::Variable& expr)
 	return {};
 }
 
+
+// statements ------------------------------------------------------
+
 void Resolver::visitBlockStmt(Stmt::Block& stmt)
 {
 	beginScope();
@@ -124,6 +131,7 @@ void Resolver::visitClassStmt(Stmt::Class& stmt)
 	if (stmt.superclass != nullptr)
 	{
 		m_currentClass = ClassType::SUBCLASS;
+		// TODO: check for own name down the whole inheritance chain
 		if (stmt.name.lexeme == stmt.superclass->name.lexeme)
 		{
 			Lox::Error(stmt.superclass->name, "A class can't inherit from itself.");
@@ -173,7 +181,9 @@ void Resolver::visitIfStmt(Stmt::If& stmt)
 	resolve(stmt.condition);
 	resolve(stmt.thenBranch);
 	if (stmt.elseBranch != nullptr)
-	{ resolve(stmt.elseBranch); }
+	{
+		resolve(stmt.elseBranch);
+	}
 }
 
 void Resolver::visitPrintStmt(Stmt::Print& stmt)
@@ -184,7 +194,10 @@ void Resolver::visitPrintStmt(Stmt::Print& stmt)
 void Resolver::visitReturnStmt(Stmt::Return& stmt)
 {
 	if (m_currentFunction == FunctionType::NONE)
-	{ Lox::Error(stmt.keyword, "Cannot return from top-level code."); }
+	{
+		Lox::Error(stmt.keyword, "Cannot return from top-level code.");
+	}
+
 	if (stmt.value != nullptr)
 	{
 		if (m_currentFunction == FunctionType::INITIALIZER)
@@ -212,9 +225,8 @@ void Resolver::visitWhileStmt(Stmt::While& stmt)
 	resolve(stmt.body);
 }
 
-void Resolver::resolve(Stmt* stmt) { stmt->accept(this); }
 
-void Resolver::resolve(Expr* expr) { expr->accept(this); }
+// helper functions ------------------------------------------------
 
 void Resolver::resolveFunction(const Stmt::Function& function, const FunctionType type)
 {
@@ -227,8 +239,11 @@ void Resolver::resolveFunction(const Stmt::Function& function, const FunctionTyp
 		declare(param);
 		define(param);
 	}
+
 	resolve(function.body);
+
 	endScope();
+
 	m_currentFunction = enclosingFunction;
 }
 
@@ -248,15 +263,17 @@ void Resolver::declare(const Token& name)
 
 	auto& scope = m_scopes.top();
 	if (scope.contains(name.lexeme))
-	{ Lox::Error(name, "Variable with this name already declared in this scope."); }
+	{
+		Lox::Error(name, "Variable with this name already declared in this scope.");
+	}
+
 	scope.insert_or_assign(name.lexeme, false);
 }
 
 void Resolver::define(const Token& name)
 {
 	if (m_scopes.empty()) return;
-	//m_scopes.top().at(name.lexeme) = true;
-	// I chose insert_or_assign, because it is closer to java's put
+
 	m_scopes.top().insert_or_assign(name.lexeme, true);
 }
 
