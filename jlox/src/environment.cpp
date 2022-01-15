@@ -5,11 +5,11 @@
 #include "lox.h"
 #include "RuntimeError.h"
 
-Environment::Environment(Environment* enclosing): m_enclosing(enclosing)
+Environment::Environment(std::shared_ptr<Environment> enclosing): m_enclosing(std::move(enclosing))
 {}
 
 
-Environment* Environment::getEnclosing() const
+std::shared_ptr<Environment> Environment::getEnclosing() const
 {
 	return m_enclosing;
 }
@@ -80,7 +80,7 @@ Environment& Environment::ancestor(const size_t distance)
 	Environment* environment = this;
 	for (size_t i = 0; i < distance; i++)
 	{
-		environment = environment->m_enclosing;
+		environment = environment->m_enclosing.get();
 	}
 	return *environment;
 }

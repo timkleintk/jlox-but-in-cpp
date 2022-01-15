@@ -149,11 +149,6 @@ void Lox::runtimeError(const RuntimeError& error)
 	m_hadRuntimeError = true;
 }
 
-void Lox::ResetInterpreter()
-{
-	m_interpreter = Interpreter();
-}
-
 void Lox::Error(const Token& token, const std::string& message)
 {
 	if (token.type == END_OF_FILE)
@@ -205,7 +200,7 @@ void Lox::Report(const size_t line, const std::string& where, const std::string&
 void Lox::PrintStatus()
 {
 	// globals
-	m_interpreter.globals.debugPrint();
+	m_interpreter.globals->debugPrint();
 
 	// locals
 	std::cout << "locals:\n";

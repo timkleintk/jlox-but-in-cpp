@@ -2,17 +2,18 @@
 #include <string>
 #include <unordered_map>
 
+#include "garbageCollector.h"
 #include "object.h"
 
 
 class Token;
 
-class Environment
+class Environment : public GarbageCollectable<Environment>
 {
 public:
-	explicit Environment(Environment* enclosing = nullptr);
+	explicit Environment(std::shared_ptr<Environment> enclosing = nullptr);
 
-	Environment* getEnclosing() const;
+	std::shared_ptr<Environment> getEnclosing() const;
 
 	object_t get(const Token& name);
 	object_t getAt(size_t distance, const std::string& name);
@@ -26,9 +27,9 @@ public:
 	void debugPrint() const;
 
 private:
-	Environment& ancestor(const size_t distance);
+	Environment& ancestor(size_t distance);
 
-	Environment* m_enclosing = nullptr;
+	std::shared_ptr<Environment> m_enclosing = nullptr;
 	std::unordered_map<std::string, object_t> m_values;
 };
 

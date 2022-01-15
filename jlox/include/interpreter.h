@@ -23,13 +23,12 @@ public:
 	void resolve(std::shared_ptr<Expr> expr, size_t depth);
 	object_t lookUpVariable(const Token& name, const std::shared_ptr<Expr>& expr);
 
-	void executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, Environment* environment);
+	void executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, std::shared_ptr<Environment> environment);
 
-	Environment globals;
+	std::shared_ptr<Environment> globals = nullptr;
 	std::unordered_map<std::shared_ptr<Expr>, size_t> locals; // nts: make it weak pointer?
 private:
-
-	Environment* m_environment = nullptr;
+	std::shared_ptr<Environment> m_environment = nullptr;
 	std::shared_ptr<LoxCallable> m_clockFunction = nullptr;
 
 	template <typename Ptr>

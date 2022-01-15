@@ -25,16 +25,24 @@ public:
 
 // helper functions
 void CheckNumberOperand(const Token& op, const object_t& operand)
-{ if (!is<double>(operand)) { throw RuntimeError(op, "Operand must be a number."); } }
+{
+	if (!is<double>(operand)) { throw RuntimeError(op, "Operand must be a number."); }
+}
 void CheckNumberOperands(const Token& op, const object_t& left, const object_t& right)
-{ if (!is<double>(left) || !is<double>(right)) { throw RuntimeError(op, "Operands must be numbers."); } }
+{
+	if (!is<double>(left) || !is<double>(right)) { throw RuntimeError(op, "Operands must be numbers."); }
+}
 
 // constructor
-Interpreter::Interpreter(): m_environment(&globals)
+Interpreter::Interpreter()
 {
+	globals = newShared<Environment>(nullptr);
+	m_environment = globals->getShared(); // nts: is getShared call even needed?
+
 	m_clockFunction = std::make_unique<ClockFunction>();
-	globals.define("clock", object_t(m_clockFunction.get()));
+	globals->define("clock", object_t(m_clockFunction.get()));
 }
+
 
 // where the magic starts
 void Interpreter::interpret(const std::vector<std::shared_ptr<Stmt>>& statements)
@@ -56,7 +64,8 @@ void Interpreter::interpret(const std::vector<std::shared_ptr<Stmt>>& statements
 // Statements
 void Interpreter::visitBlockStmt(Stmt::Block& stmt)
 {
-	executeBlock(stmt.statements, new Environment(m_environment));
+	//executeBlock(stmt.statements, new Environment(m_environment));
+	executeBlock(stmt.statements, newShared<Environment>(m_environment));
 }
 
 void Interpreter::visitClassStmt(Stmt::Class& stmt)
@@ -77,7 +86,7 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 
 	if (stmt.superclass != nullptr)
 	{
-		m_environment = new Environment(m_environment);
+		m_environment = newShared<Environment>(std::move(m_environment));
 		m_environment->define("super", superclass);
 	}
 
@@ -166,7 +175,7 @@ object_t Interpreter::visitAssignExpr(Expr::Assign& expr)
 	}
 	else
 	{
-		globals.assign(expr.name, value);
+		globals->assign(expr.name, value);
 	}
 
 	return value;
@@ -203,9 +212,13 @@ object_t Interpreter::visitBinaryExpr(Expr::Binary& expr)
 		return as<double>(left) - as<double>(right);
 	case PLUS:
 		if (is<double>(left) && is<double>(right))
-		{ return as<double>(left) + as<double>(right); }
+		{
+			return as<double>(left) + as<double>(right);
+		}
 		if (is<std::string>(left) && is<std::string>(right))
-		{ return as<std::string>(left) + as<std::string>(right); }
+		{
+			return as<std::string>(left) + as<std::string>(right);
+		}
 		throw RuntimeError(expr.op, "Operands must be two numbers or two strings.");
 	case SLASH:
 		CheckNumberOperands(expr.op, left, right);
@@ -236,7 +249,9 @@ object_t Interpreter::visitCallExpr(Expr::Call& expr)
 	else if (is<LoxFunction>(callee)) { callable = new LoxFunction(as<LoxFunction>(callee)); }
 
 	if (callable == nullptr)
-	{ throw RuntimeError(expr.paren, "Can only call functions and classes."); }
+	{
+		throw RuntimeError(expr.paren, "Can only call functions and classes.");
+	}
 
 	if (arguments.size() != callable->arity())
 	{
@@ -258,10 +273,14 @@ object_t Interpreter::visitGetExpr(Expr::Get& expr)
 }
 
 object_t Interpreter::visitGroupingExpr(Expr::Grouping& expr)
-{ return evaluate(expr.expression); }
+{
+	return evaluate(expr.expression);
+}
 
 object_t Interpreter::visitLiteralExpr(Expr::Literal& expr)
-{ return expr.value; }
+{
+	return expr.value;
+}
 
 object_t Interpreter::visitLogicalExpr(Expr::Logical& expr)
 {
@@ -284,7 +303,9 @@ object_t Interpreter::visitSetExpr(Expr::Set& expr)
 	const object_t object = evaluate(expr.object);
 
 	if (!is<LoxInstance*>(object))
-	{ throw RuntimeError(expr.name, "Only instances have fields."); }
+	{
+		throw RuntimeError(expr.name, "Only instances have fields.");
+	}
 
 	object_t value = evaluate(expr.value);
 	as<LoxInstance*>(object)->set(expr.name, value);
@@ -301,14 +322,18 @@ object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 	const std::optional<LoxFunction> method = superclass->findMethod(expr.method.lexeme);
 
 	if (!method)
-	{ throw RuntimeError(expr.method, "Undefined property '" + expr.method.lexeme + "'."); }
+	{
+		throw RuntimeError(expr.method, "Undefined property '" + expr.method.lexeme + "'.");
+	}
 
 
-	return {method->bind(instance)};
+	return { method->bind(instance) };
 }
 
 object_t Interpreter::visitThisExpr(Expr::This& expr)
-{ return lookUpVariable(expr.keyword, expr.getShared()); }
+{
+	return lookUpVariable(expr.keyword, expr.getShared());
+}
 
 object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 {
@@ -325,24 +350,33 @@ object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 }
 
 object_t Interpreter::visitVariableExpr(Expr::Variable& expr)
-{ return lookUpVariable(expr.name, expr.getShared()); }
+{
+	return lookUpVariable(expr.name, expr.getShared());
+}
 
 
 void Interpreter::resolve(std::shared_ptr<Expr> expr, size_t depth)
-{ locals.emplace(std::move(expr), depth); }
+{
+	locals.emplace(std::move(expr), depth);
+}
 
 object_t Interpreter::lookUpVariable(const Token& name, const std::shared_ptr<Expr>& expr)
 {
 	if (const auto it = locals.find(expr); it != locals.end())
-	{ return m_environment->getAt(it->second, name.lexeme); }
-	return globals.get(name);
+	{
+		return m_environment->getAt(it->second, name.lexeme);
+	}
+	return globals->get(name);
 }
 
 
-void Interpreter::executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, Environment* environment)
+void Interpreter::executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, std::shared_ptr<Environment> environment)
 {
-	Environment* previous = m_environment;
-	m_environment = environment;
+	//Environment* previous = m_environment;
+	// nts: std::swap?
+	std::shared_ptr<Environment> previous = std::move(m_environment);
+
+	m_environment = std::move(environment);
 
 	try
 	{
@@ -353,14 +387,11 @@ void Interpreter::executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, 
 	}
 	catch (...)
 	{
-		m_environment = previous;
+		//m_environment = previous;
+		std::swap(m_environment, previous);
 		throw;
 	}
 
-	m_environment = previous;
+	//m_environment = previous;
+	std::swap(m_environment, previous);
 }
-
-
-
-
-

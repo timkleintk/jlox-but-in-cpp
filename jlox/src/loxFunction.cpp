@@ -6,9 +6,9 @@
 #include "interpreter.h"
 #include "return.h"
 
-LoxFunction::LoxFunction(std::shared_ptr<Stmt::Function> declaration, Environment* closure, const bool isInitializer):
+LoxFunction::LoxFunction(std::shared_ptr<Stmt::Function> declaration, std::shared_ptr<Environment> closure, const bool isInitializer):
 	m_declaration(std::move(declaration)),
-	m_closure(closure),
+	m_closure(std::move(closure)),
 	m_isInitializer(isInitializer)
 {}
 
@@ -20,16 +20,16 @@ bool LoxFunction::operator==(const LoxFunction& as) const
 // returns a copy of the function with the "this" pointer bound
 LoxFunction LoxFunction::bind(LoxInstance* instance) const
 {
-	auto* environment = new Environment(m_closure);
+	auto environment = newShared<Environment>(m_closure);
 	environment->define("this", instance);
-	return {m_declaration, environment, m_isInitializer};
+	return {m_declaration, std::move(environment), m_isInitializer};
 	//return std::make_unique<LoxFunction>(m_declaration, m_closure, m_isInitializer);
 }
 
 object_t LoxFunction::call(Interpreter* interpreter, const std::vector<object_t>& arguments) const
 {
 	assert(m_closure != nullptr);
-	const auto environment = new Environment(m_closure);
+	auto environment = newShared<Environment>(m_closure);
 	
 	for (size_t i = 0; i < m_declaration->params.size(); i++)
 	{
@@ -38,7 +38,7 @@ object_t LoxFunction::call(Interpreter* interpreter, const std::vector<object_t>
 
 	try
 	{
-		interpreter->executeBlock(m_declaration->body, environment);
+		interpreter->executeBlock(m_declaration->body, std::move(environment));
 	}
 	catch (Return& r)
 	{
