@@ -14,6 +14,6 @@ public:
 
 	const LoxClass& getClass() { return m_class; }
 private:
-	LoxClass m_class;
+	LoxClass m_class; // nts: make this a smart pointer?
 	std::unordered_map<std::string, object_t> m_fields;
 };

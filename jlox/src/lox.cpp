@@ -24,8 +24,7 @@ void Lox::RunFile(const char* path)
 	}
 }
 
-// nts: better documentation here
-// returns wether or not there is enough in the source string to craft a full statement.
+// returns true if the source has no missing '}', ')' or '"', and the last character is an '}', ';' or three '\n' in a row
 bool IsSourceComplete(const std::string& src)
 {
 	std::stack<char> braceBalance;
@@ -205,13 +204,12 @@ void Lox::Report(const size_t line, const std::string& where, const std::string&
 
 void Lox::PrintStatus()
 {
-	
 	// globals
 	m_interpreter.globals.debugPrint();
 
 	// locals
 	std::cout << "locals:\n";
-	for (const auto & [local, dist] : m_interpreter.locals)
+	for (const auto& [local, dist] : m_interpreter.locals)
 	{
 		std::cout << "[\"" << toString(local.get()) << "\"]: " << dist << "\n";
 	}

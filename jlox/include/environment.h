@@ -11,19 +11,17 @@ class Environment
 {
 public:
 	explicit Environment(Environment* enclosing = nullptr);
-	~Environment();
+
+	Environment* getEnclosing() const;
 
 	object_t get(const Token& name);
-
-	void define(const std::string& name, const object_t& value);
-
 	object_t getAt(size_t distance, const std::string& name);
 
-	void assignAt(const size_t distance, const Token& name, const object_t& value);
+	void assign(const Token& name, object_t value);
+	void assignAt(size_t distance, const Token& name, object_t value);
 
-	void assign(const Token& name, const object_t& value);
+	void define(const std::string& name, object_t value);
 
-	Environment* getEnclosing() const { return m_enclosing; }
 
 	void debugPrint() const;
 

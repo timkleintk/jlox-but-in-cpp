@@ -104,6 +104,7 @@
   <ItemGroup>
     <ClInclude Include="include\environment.h" />
     <ClInclude Include="include\expr.h" />
+    <ClInclude Include="include\garbageCollector.h" />
     <ClInclude Include="include\interpreter.h" />
     <ClInclude Include="include\lox.h" />
     <ClInclude Include="include\loxCallable.h" />
@@ -117,9 +118,6 @@
     <ClInclude Include="include\RuntimeError.h" />
     <ClInclude Include="include\scanner.h" />
     <ClInclude Include="include\token.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

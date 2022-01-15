@@ -1,15 +1,19 @@
 #pragma once
 
 #include <vector>
+
+#include "garbageCollector.h"
 #include "object.h"
+
 class Interpreter;
 
-class LoxCallable
+// nts: should this be garbage collectable?
+class LoxCallable : public GarbageCollectable<LoxCallable>
 {
 public:
 	LoxCallable() = default;
-	virtual ~LoxCallable() = default;
+	~LoxCallable() override = default;
 
-	virtual object_t call(Interpreter* interpreter, std::vector<object_t> arguments) const = 0;
+	virtual object_t call(Interpreter* interpreter, const std::vector<object_t>& arguments) const = 0;
 	virtual size_t arity() const = 0;
 };

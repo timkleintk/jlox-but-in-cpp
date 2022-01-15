@@ -15,11 +15,11 @@
 class ClockFunction final : public LoxCallable
 {
 public:
-	object_t call(Interpreter*, std::vector<object_t>) const override
+	object_t call(Interpreter*, const std::vector<object_t>&) const override
 	{
 		return static_cast<double>(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 	}
-	[[nodiscard]] size_t arity() const override { return 0; }
+	size_t arity() const override { return 0; }
 };
 
 
@@ -49,6 +49,108 @@ void Interpreter::interpret(const std::vector<std::shared_ptr<Stmt>>& statements
 	catch (RuntimeError& error)
 	{
 		Lox::runtimeError(error);
+	}
+}
+
+
+// Statements
+void Interpreter::visitBlockStmt(Stmt::Block& stmt)
+{
+	executeBlock(stmt.statements, new Environment(m_environment));
+}
+
+void Interpreter::visitClassStmt(Stmt::Class& stmt)
+{
+	LoxClass* superclass = nullptr;
+
+	if (stmt.superclass != nullptr)
+	{
+		const object_t lc = evaluate(stmt.superclass);
+		if (!is<LoxClass*>(lc))
+		{
+			throw RuntimeError(stmt.superclass->name, "Superclass must be a class.");
+		}
+		superclass = as<LoxClass*>(lc);
+	}
+
+	m_environment->define(stmt.name.lexeme, {});
+
+	if (stmt.superclass != nullptr)
+	{
+		m_environment = new Environment(m_environment);
+		m_environment->define("super", superclass);
+	}
+
+	std::unordered_map<std::string, LoxFunction> methods;
+	for (const auto& method : stmt.methods)
+	{
+		methods.insert_or_assign(method->name.lexeme, LoxFunction(method, m_environment, method->name.lexeme == "init"));
+	}
+
+	if (superclass != nullptr)
+	{
+		// nts free the created environment?
+		m_environment = m_environment->getEnclosing();
+	}
+
+	// nts: leak
+	m_environment->assign(stmt.name, object_t(new LoxClass(stmt.name.lexeme, superclass, std::move(methods))));
+}
+
+void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
+{
+	evaluate(stmt.expression);
+}
+
+void Interpreter::visitFunctionStmt(Stmt::Function& stmt)
+{
+	// nts: leak
+	LoxCallable* lc = new LoxFunction(std::dynamic_pointer_cast<Stmt::Function>(stmt.getShared()), m_environment, false);
+
+	m_environment->define(stmt.name.lexeme, lc);
+}
+
+void Interpreter::visitIfStmt(Stmt::If& stmt)
+{
+	if (IsTruthy(evaluate(stmt.condition)))
+	{
+		execute(stmt.thenBranch);
+	}
+	else if (stmt.elseBranch != nullptr)
+	{
+		execute(stmt.elseBranch);
+	}
+}
+
+void Interpreter::visitPrintStmt(Stmt::Print& stmt)
+{
+	const object_t value = evaluate(stmt.expression.get());
+	std::cout << toString(value) << std::endl;
+}
+
+void Interpreter::visitReturnStmt(Stmt::Return& stmt)
+{
+	object_t value = {};
+	if (stmt.value != nullptr) { value = evaluate(stmt.value); }
+
+	throw Return(value);
+}
+
+void Interpreter::visitVarStmt(Stmt::Var& stmt)
+{
+	object_t value = {};
+	if (stmt.initializer != nullptr)
+	{
+		value = evaluate(stmt.initializer);
+	}
+	m_environment->define(stmt.name.lexeme, value);
+}
+
+void Interpreter::visitWhileStmt(Stmt::While& stmt)
+{
+	while (IsTruthy(evaluate(stmt.condition)))
+	{
+		execute(stmt.body);
 	}
 }
 
@@ -224,106 +326,6 @@ object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 
 object_t Interpreter::visitVariableExpr(Expr::Variable& expr)
 { return lookUpVariable(expr.name, expr.getShared()); }
-
-
-// Statements
-void Interpreter::visitBlockStmt(Stmt::Block& stmt)
-{
-	executeBlock(stmt.statements, new Environment(m_environment));
-}
-
-void Interpreter::visitClassStmt(Stmt::Class& stmt)
-{
-	LoxClass* superclass = nullptr;
-
-	if (stmt.superclass != nullptr)
-	{
-		const object_t lc = evaluate(stmt.superclass);
-		if (!is<LoxClass*>(lc))
-		{
-			throw RuntimeError(stmt.superclass->name, "Superclass must be a class.");
-		}
-		superclass = as<LoxClass*>(lc);
-	}
-
-	m_environment->define(stmt.name.lexeme, {});
-
-	if (stmt.superclass != nullptr)
-	{
-		m_environment = new Environment(m_environment);
-		m_environment->define("super", superclass);
-	}
-
-	std::unordered_map<std::string, LoxFunction> methods;
-	for (const auto& method : stmt.methods)
-	{
-		methods.insert_or_assign(method->name.lexeme, LoxFunction(method, m_environment, method->name.lexeme == "init"));
-	}
-
-	if (superclass != nullptr)
-	{
-		// nts free the created environment?
-		m_environment = m_environment->getEnclosing();
-	}
-
-	// nts: leak
-	m_environment->assign(stmt.name, object_t(new LoxClass(stmt.name.lexeme, superclass, std::move(methods))));
-}
-
-void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
-{
-	evaluate(stmt.expression);
-}
-
-void Interpreter::visitFunctionStmt(Stmt::Function& stmt)
-{
-	// nts: leak
-	m_environment->define(stmt.name.lexeme, object_t(static_cast<LoxCallable*>(new LoxFunction(stmt.getShared(), m_environment, false))));
-}
-
-void Interpreter::visitIfStmt(Stmt::If& stmt)
-{
-	if (IsTruthy(evaluate(stmt.condition)))
-	{
-		execute(stmt.thenBranch);
-	}
-	else if (stmt.elseBranch != nullptr)
-	{
-		execute(stmt.elseBranch);
-	}
-}
-
-void Interpreter::visitPrintStmt(Stmt::Print& stmt)
-{
-	const object_t value = evaluate(stmt.expression.get());
-	std::cout << toString(value) << std::endl;
-}
-
-void Interpreter::visitReturnStmt(Stmt::Return& stmt)
-{
-	object_t value = {};
-	if (stmt.value != nullptr) { value = evaluate(stmt.value); }
-
-	throw Return(value);
-}
-
-void Interpreter::visitVarStmt(Stmt::Var& stmt)
-{
-	object_t value = {};
-	if (stmt.initializer != nullptr)
-	{
-		value = evaluate(stmt.initializer);
-	}
-	m_environment->define(stmt.name.lexeme, value);
-}
-
-void Interpreter::visitWhileStmt(Stmt::While& stmt)
-{
-	while (IsTruthy(evaluate(stmt.condition)))
-	{
-		execute(stmt.body);
-	}
-}
 
 
 void Interpreter::resolve(std::shared_ptr<Expr> expr, size_t depth)

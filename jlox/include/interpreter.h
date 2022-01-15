@@ -13,11 +13,11 @@ public:
 
 	void interpret(const std::vector<std::shared_ptr<Stmt>>& statements);
 
-#define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
-	EXPR_TYPES;
-#undef TYPE
 #define TYPE(name, ...) void visit ## name ## Stmt(Stmt::name& stmt) override;
 	STMT_TYPES;
+#undef TYPE
+#define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
+	EXPR_TYPES;
 #undef TYPE
 
 	void resolve(std::shared_ptr<Expr> expr, size_t depth);
@@ -33,14 +33,10 @@ private:
 	std::shared_ptr<LoxCallable> m_clockFunction = nullptr;
 
 	template <typename Ptr>
-	object_t evaluate(Ptr expr) { return expr->accept(this); }
-	//object_t evaluate(const std::unique_ptr<Expr>& expr) { return evaluate(expr.get()); }
-	//object_t evaluate(const std::shared_ptr<Expr>& expr) { return evaluate(expr.get()); }
+	void execute(Ptr stmt) { stmt->accept(this); }
 
 	template <typename Ptr>
-	void execute(Ptr stmt) { stmt->accept(this); }
-	//void execute(const std::unique_ptr<Stmt>& stmt) { execute(stmt.get()); }
-	//void execute(const std::shared_ptr<Stmt>& stmt) { execute(stmt.get()); }
+	object_t evaluate(Ptr expr) { return expr->accept(this); }
 };
 
 

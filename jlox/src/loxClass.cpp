@@ -10,29 +10,30 @@ LoxClass::LoxClass(std::string name, LoxClass* superclass, std::unordered_map<st
 	name(std::move(name)),
 	m_superclass(superclass),
 	m_methods(std::move(methods))
-{
-}
-
-LoxClass::~LoxClass() = default;
-
-// nts: make sure all uses of this function have been fixed
-std::optional<LoxFunction> LoxClass::findMethod(const std::string& methodName) const
-{
-	if (m_methods.contains(methodName))
-	{ return m_methods.at(methodName); } // nts: this returns a copy, not a reference
-
-	if (m_superclass != nullptr)
-	{ return m_superclass->findMethod(methodName); }
-
-	return {};
-}
+{}
 
 bool LoxClass::operator==(const LoxClass& as) const
 {
 	return as.name == name;
 }
 
-object_t LoxClass::call(Interpreter * interpreter, const std::vector<object_t> arguments) const
+std::optional<LoxFunction> LoxClass::findMethod(const std::string& methodName) const
+{
+	if (m_methods.contains(methodName))
+	{
+		// nts: this returns a copy, not a reference
+		return m_methods.at(methodName);
+	}
+
+	if (m_superclass != nullptr)
+	{
+		return m_superclass->findMethod(methodName);
+	}
+
+	return {};
+}
+
+object_t LoxClass::call(Interpreter * interpreter, const std::vector<object_t>& arguments) const
 {
 	// nts: leak
 	auto* instance = new LoxInstance(*this);

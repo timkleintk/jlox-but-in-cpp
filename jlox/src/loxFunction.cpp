@@ -12,10 +12,6 @@ LoxFunction::LoxFunction(std::shared_ptr<Stmt::Function> declaration, Environmen
 	m_isInitializer(isInitializer)
 {}
 
-LoxFunction::~LoxFunction()
-{
-}
-
 bool LoxFunction::operator==(const LoxFunction& as) const
 {
 	return as.getClosure() == m_closure && as.getDeclaration() == m_declaration;
@@ -30,7 +26,7 @@ LoxFunction LoxFunction::bind(LoxInstance* instance) const
 	//return std::make_unique<LoxFunction>(m_declaration, m_closure, m_isInitializer);
 }
 
-object_t LoxFunction::call(Interpreter* interpreter, const std::vector<object_t> arguments) const
+object_t LoxFunction::call(Interpreter* interpreter, const std::vector<object_t>& arguments) const
 {
 	assert(m_closure != nullptr);
 	const auto environment = new Environment(m_closure);

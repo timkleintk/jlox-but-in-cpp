@@ -6,12 +6,13 @@
 #include "RuntimeError.h"
 
 Environment::Environment(Environment* enclosing): m_enclosing(enclosing)
-{
-	
-}
+{}
 
-Environment::~Environment()
-= default;
+
+Environment* Environment::getEnclosing() const
+{
+	return m_enclosing;
+}
 
 object_t Environment::get(const Token& name)
 {
@@ -26,10 +27,37 @@ object_t Environment::get(const Token& name)
 	throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
 }
 
-void Environment::define(const std::string& name, const object_t& value)
+object_t Environment::getAt(const size_t distance, const std::string& name)
 {
-	m_values.insert_or_assign(name, value);
+	return ancestor(distance).m_values.at(name);
 }
+
+void Environment::assign(const Token& name, object_t value)
+{
+	if (m_values.contains(name.lexeme))
+	{
+		m_values.at(name.lexeme) = std::move(value);
+		return;
+	}
+
+	if (m_enclosing != nullptr)
+	{
+		m_enclosing->assign(name, std::move(value));
+		return;
+	}
+
+	throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
+}
+void Environment::assignAt(const size_t distance, const Token& name, object_t value)
+{
+	ancestor(distance).m_values.insert_or_assign(name.lexeme, std::move(value));
+}
+
+void Environment::define(const std::string& name, object_t value)
+{
+	m_values.insert_or_assign(name, std::move(value));
+}
+
 
 void Environment::debugPrint() const
 {
@@ -46,6 +74,7 @@ void Environment::debugPrint() const
 	}
 }
 
+
 Environment& Environment::ancestor(const size_t distance)
 {
 	Environment* environment = this;
@@ -56,29 +85,3 @@ Environment& Environment::ancestor(const size_t distance)
 	return *environment;
 }
 
-object_t Environment::getAt(const size_t distance, const std::string& name)
-{
-	return ancestor(distance).m_values.at(name);
-}
-
-void Environment::assignAt(const size_t distance, const Token& name, const object_t& value)
-{
-	ancestor(distance).m_values.insert_or_assign(name.lexeme, value);
-}
-
-void Environment::assign(const Token& name, const object_t& value)
-{
-	if (m_values.contains(name.lexeme))
-	{
-		m_values.at(name.lexeme) = value;
-		return;
-	}
-
-	if (m_enclosing != nullptr)
-	{
-		m_enclosing->assign(name, value);
-		return;
-	}
-
-	throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
-}

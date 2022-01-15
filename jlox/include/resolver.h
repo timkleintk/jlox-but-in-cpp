@@ -25,11 +25,11 @@ public:
 			resolve(stmt);
 	}
 
-#define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
-	EXPR_TYPES;
-#undef TYPE
 #define TYPE(name, ...) void visit ## name ## Stmt(Stmt::name& stmt) override;
 	STMT_TYPES;
+#undef TYPE
+#define TYPE(name, ...) object_t visit ## name ## Expr(Expr::name& expr) override;
+	EXPR_TYPES;
 #undef TYPE
 
 private:
