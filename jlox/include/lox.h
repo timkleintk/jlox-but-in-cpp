@@ -27,6 +27,4 @@ private:
 	static void Run(const std::string& source);
 
 	static void Report(size_t line, const std::string& where, const std::string& message);
-
-	static void PrintStatus();
 };

@@ -6,7 +6,7 @@
 
 std::string toString(const object_t& o)
 {
-	if (isNull(o)) return "nil";
+	if (IsNull(o)) return "nil";
 	if (is<std::string>(o)) return as<std::string>(o);
 	if (is<double>(o))
 	{
@@ -39,19 +39,22 @@ std::string toString(const object_t& o)
 	return R"(<???>)";
 }
 
-bool IsTruthy(const object_t& object)
+bool IsNull(const object_t& o)
 {
-	if (isNull(object)) return false;
-	if (is<bool>(object)) return as<bool>(object);
-	return true;
+#if defined(OBJECT_IS_ANY)
+	return !o.has_value();
+#elif defined(OBJECT_IS_VARIANT)
+	return std::holds_alternative<std::monostate>(o);
+#endif
 }
 
-#define EqualCheck(Type) if (is<Type>(a)) return as<Type>(a) == as<Type>(b) 
 bool IsEqual(const object_t& a, const object_t& b)
 {
-	if (!a.has_value() && !b.has_value()) { return true; } // if both nil
-	if (!a.has_value()) { return false; }                  // if only one operand is nil
-	if (a.type() != b.type()) { return false; }            // a and b should be the same type
+#if defined(OBJECT_IS_ANY)
+#define EqualCheck(Type) if (is<Type>(a)) return as<Type>(a) == as<Type>(b) 
+	if (IsNull(a) && IsNull(b)) { return true; } // if both nil
+	if (IsNull(a)) { return false; }             // if only one operand is nil
+	if (a.type() != b.type()) { return false; }  // a and b should be the same type
 
 	EqualCheck(bool);
 	EqualCheck(std::string);
@@ -61,10 +64,19 @@ bool IsEqual(const object_t& a, const object_t& b)
 	EqualCheck(std::shared_ptr<LoxCallable>);
 	EqualCheck(std::shared_ptr<LoxFunction>);
 
-
 	// bug: not fully implemented
 	printf("Warning: tried to compare two values of unknown type. Known types: nil, bool, string, number, class.\n");
 
 	return false;
-}
 #undef EqualCheck
+#elif defined(OBJECT_IS_VARIANT)
+	return a == b;
+#endif
+}
+
+bool IsTruthy(const object_t& object)
+{
+	if (IsNull(object)) return false;
+	if (is<bool>(object)) return as<bool>(object);
+	return true;
+}

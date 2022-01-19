@@ -109,7 +109,6 @@ void Lox::RunPrompt(const bool qualityOfLife)
 		// special commands
 		if (std::cin.eof() || source == "exit") { break; }
 		if (source == "clear") { system("CLS"); continue; }
-		if (source == "status") { PrintStatus(); continue; }
 
 		// multiline inputs
 		while (!IsSourceComplete(source))
@@ -195,18 +194,5 @@ void Lox::Report(const size_t line, const std::string& where, const std::string&
 {
 	std::cerr << "[line " << line << "] Error" << where << ": " << message << "\n";
 	m_hadError = true;
-}
-
-void Lox::PrintStatus()
-{
-	// globals
-	m_interpreter.globals->debugPrint();
-
-	// locals
-	std::cout << "locals:\n";
-	for (const auto& [local, dist] : m_interpreter.locals)
-	{
-		std::cout << "[\"" << toString(local.get()) << "\"]: " << dist << "\n";
-	}
 }
 
