@@ -7,7 +7,6 @@
 
 class Interpreter;
 
-// nts: should this be garbage collectable?
 class LoxCallable : public GarbageCollectable<LoxCallable>
 {
 public:

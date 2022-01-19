@@ -12,6 +12,7 @@ class Resolver final : public Stmt::Visitor, public Expr::Visitor
 public:
 	explicit Resolver(Interpreter& interpreter);
 
+	// visit the node
 	template <typename T>
 	void resolve(const T& ptr)
 	{
@@ -56,7 +57,7 @@ private:
 	void declare(const Token& name);
 	void define(const Token& name);
 
-	// resolve a l-value
+	// tell the interpreter how many scopes down to find an l-value
 	void resolveLocal(std::shared_ptr<Expr> expr, const Token& name) const;
 
 

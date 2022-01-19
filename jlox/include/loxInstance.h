@@ -7,7 +7,7 @@ class Token;
 class LoxInstance: public GarbageCollectable<LoxInstance>
 {
 public:
-	LoxInstance(const LoxClass& klass);
+	LoxInstance(LoxClass klass);
 
 	object_t get(const Token& name);
 	void set(const Token& name, const object_t& value);

@@ -8,8 +8,12 @@ Resolver::Resolver(Interpreter& interpreter) : m_interpreter(interpreter)
 
 object_t Resolver::visitAssignExpr(Expr::Assign& expr)
 {
-	resolve(expr.value);
+	// tell the interpreter where to find the assignment target
 	resolveLocal(expr.getShared(), expr.name);
+
+	// descend the syntax tree further
+	resolve(expr.value);
+
 	return {};
 }
 
@@ -76,6 +80,7 @@ object_t Resolver::visitSuperExpr(Expr::Super& expr)
 		Lox::Error(expr.keyword, "Cannot use 'super' in a class with no superclass.");
 	}
 
+	// tell the interpreter where to find the baseclass method
 	resolveLocal(expr.getShared(), expr.keyword);
 	return {};
 }
@@ -87,6 +92,7 @@ object_t Resolver::visitThisExpr(Expr::This& expr)
 		Lox::Error(expr.keyword, "Cannot use 'this' outside of a class.");
 	}
 
+	// tell the interpreter where to find the this pointer
 	resolveLocal(expr.getShared(), expr.keyword);
 	return {};
 }
@@ -106,6 +112,7 @@ object_t Resolver::visitVariableExpr(Expr::Variable& expr)
 		Lox::Error(expr.name, "Cannot read local variable in its own initializer.");
 	}
 
+	// tell the interpreter where to find the variable
 	resolveLocal(expr.getShared(), expr.name);
 	return {};
 }
@@ -284,7 +291,7 @@ void Resolver::resolveLocal(std::shared_ptr<Expr> expr, const Token& name) const
 		// reverse loop over the scope stack and find the identifier
 		if (m_scopes._Get_container()[i].contains(name.lexeme))
 		{
-			// store the number of steps
+			// store the number of steps in the interpreter
 			m_interpreter.resolve(std::move(expr), m_scopes.size() - 1 - i);
 			return;
 		}

@@ -12,10 +12,8 @@ class LoxClass final : public LoxCallable
 {
 public:
 	LoxClass(std::string name, std::shared_ptr<LoxClass> superclass, std::unordered_map<std::string, LoxFunction> methods);
-	// nts: is this needed?
-	LoxClass& operator=(const LoxClass&) = delete;
-
-	bool operator==(const LoxClass& as) const;
+	
+	bool operator==(const LoxClass& klass) const;
 
 	std::optional<LoxFunction> findMethod(const std::string& methodName) const;
 
@@ -23,7 +21,7 @@ public:
 	size_t arity() const override;
 
 	std::string name;
-	std::shared_ptr<LoxClass> m_superclass = nullptr;
+	std::shared_ptr<LoxClass> superclass = nullptr;
 private:
 	std::unordered_map<std::string, LoxFunction> m_methods;
 };

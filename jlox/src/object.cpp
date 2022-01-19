@@ -26,7 +26,7 @@ std::string toString(const object_t& o)
 	if (is<std::shared_ptr<LoxCallable>>(o))
 	{
 		LoxCallable* p = as<std::shared_ptr<LoxCallable>>(o).get(); // nts: dangling?
-		if (const auto* pp = dynamic_cast<LoxFunction*>(p))
+		if (const auto* pp = dynamic_cast<LoxFunction*>(p); pp != nullptr)
 		{
 			return "<fn " + pp->getDeclaration()->name.lexeme + ">";
 		}
@@ -35,8 +35,6 @@ std::string toString(const object_t& o)
 	if (is<std::shared_ptr<LoxClass>>(o)) return as<std::shared_ptr<LoxClass>>(o)->name;
 	if (is<std::shared_ptr<LoxInstance>>(o)) return as<std::shared_ptr<LoxInstance>>(o)->getClass().name + " instance";
 	if (is<LoxFunction>(o)) return "<LoxFunction>";
-	//if (is<LoxClass>(o)) return "<LoxClass " + as<LoxClass>(o).name + ">";
-	//if (is<LoxInstance>(o)) return "<LoxInstance" " of " + as<LoxInstance>(o).getClass().name + ">";
 
 	return R"(<???>)";
 }
@@ -48,7 +46,7 @@ bool IsTruthy(const object_t& object)
 	return true;
 }
 
-#define EqualCheck(T) if (is<T>(a)) return as<T>(a) == as<T>(b) 
+#define EqualCheck(Type) if (is<Type>(a)) return as<Type>(a) == as<Type>(b) 
 bool IsEqual(const object_t& a, const object_t& b)
 {
 	if (!a.has_value() && !b.has_value()) { return true; } // if both nil

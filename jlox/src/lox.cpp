@@ -145,7 +145,7 @@ void Lox::Error(const size_t line, const std::string& message)
 
 void Lox::runtimeError(const RuntimeError& error)
 {
-	std::cerr << error.what() << std::endl << "[line " << error.token.line << "]" << std::endl;
+	std::cerr << error.what() << "\n[line " << error.token.line << "]\n";
 	m_hadRuntimeError = true;
 }
 

@@ -8,26 +8,29 @@
 
 LoxClass::LoxClass(std::string name, std::shared_ptr<LoxClass> superclass, std::unordered_map<std::string, LoxFunction> methods) :
 	name(std::move(name)),
-	m_superclass(std::move(superclass)),
+	superclass(std::move(superclass)),
 	m_methods(std::move(methods))
 {}
 
-bool LoxClass::operator==(const LoxClass& as) const
+bool LoxClass::operator==(const LoxClass& klass) const
 {
-	return as.name == name;
+	return klass.name == name;
 }
 
+// nts: make it return a shared_ptr
 std::optional<LoxFunction> LoxClass::findMethod(const std::string& methodName) const
 {
+	// try to find function in current class
 	if (m_methods.contains(methodName))
 	{
 		// nts: this returns a copy, not a reference
 		return m_methods.at(methodName);
 	}
 
-	if (m_superclass != nullptr)
+	// resort to parent class
+	if (superclass != nullptr)
 	{
-		return m_superclass->findMethod(methodName);
+		return superclass->findMethod(methodName);
 	}
 
 	return {};
@@ -39,10 +42,11 @@ object_t LoxClass::call(Interpreter* interpreter, const std::vector<object_t>& a
 
 	if (const auto initializer = findMethod("init"); initializer.has_value())
 	{
-		initializer.value().bind(*instance).call(interpreter, arguments); // call the initializer
+		// call the initializer
+		initializer.value().bind(*instance).call(interpreter, arguments); 
 	}
 
-	return { instance };
+	return  instance;
 }
 
 size_t LoxClass::arity() const

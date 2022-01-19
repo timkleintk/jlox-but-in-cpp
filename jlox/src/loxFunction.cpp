@@ -7,15 +7,15 @@
 #include "loxInstance.h"
 #include "return.h"
 
-LoxFunction::LoxFunction(std::shared_ptr<Stmt::Function> declaration, std::shared_ptr<Environment> closure, const bool isInitializer):
+LoxFunction::LoxFunction(std::shared_ptr<Stmt::Function> declaration, std::shared_ptr<Environment> closure, const bool isInitializer) :
 	m_declaration(std::move(declaration)),
 	m_closure(std::move(closure)),
 	m_isInitializer(isInitializer)
 {}
 
-bool LoxFunction::operator==(const LoxFunction& as) const
+bool LoxFunction::operator==(const LoxFunction& other) const
 {
-	return as.getClosure() == m_closure && as.getDeclaration() == m_declaration;
+	return other.getClosure() == m_closure && other.getDeclaration() == m_declaration;
 }
 
 // returns a copy of the function with the "this" pointer bound
@@ -23,15 +23,13 @@ LoxFunction LoxFunction::bind(const LoxInstance& instance) const
 {
 	auto environment = newShared<Environment>(m_closure);
 	environment->define("this", instance.getShared());
-	return {m_declaration, std::move(environment), m_isInitializer};
-	//return std::make_unique<LoxFunction>(m_declaration, m_closure, m_isInitializer);
+	return { m_declaration, std::move(environment), m_isInitializer };
 }
 
 object_t LoxFunction::call(Interpreter* interpreter, const std::vector<object_t>& arguments) const
 {
-	assert(m_closure != nullptr);
 	auto environment = newShared<Environment>(m_closure);
-	
+
 	for (size_t i = 0; i < m_declaration->params.size(); i++)
 	{
 		environment->define(m_declaration->params[i].lexeme, arguments[i]);

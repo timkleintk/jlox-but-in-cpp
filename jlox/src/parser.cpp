@@ -3,7 +3,7 @@
 #include "lox.h"
 
 
-Parser::Parser(const std::vector<Token>& tokens): m_tokens(tokens)
+Parser::Parser(const std::vector<Token>& tokens) : m_tokens(tokens)
 {}
 
 std::vector<std::shared_ptr<Stmt>> Parser::parse()
@@ -71,7 +71,7 @@ std::shared_ptr<Stmt::Function> Parser::function(const std::string& kind)
 		{
 			if (parameters.size() >= 8)
 			{
-				error(peek(), "Cannot have more than 8 parameters.");
+				(void)error(peek(), "Cannot have more than 8 parameters.");
 			}
 			parameters.push_back(consume(IDENTIFIER, "Expect parameter name."));
 		} while (match(COMMA));
@@ -169,10 +169,9 @@ std::shared_ptr<Stmt> Parser::forStatement()
 	// add increment at the end of loop body
 	if (increment != nullptr)
 	{
-		body = newShared<Stmt::Block>(std::vector<std::shared_ptr<Stmt>>
-		{
+		body = newShared<Stmt::Block>(std::vector<std::shared_ptr<Stmt>> {
 			std::move(body),
-				newShared<Stmt::Expression>(std::move(increment))
+			newShared<Stmt::Expression>(std::move(increment))
 		});
 	}
 
@@ -198,7 +197,7 @@ std::shared_ptr<Stmt> Parser::forStatement()
 
 std::shared_ptr<Stmt> Parser::ifStatement()
 {
-	consume(LEFT_PAREN, "Expect '(' aftr 'if',");
+	consume(LEFT_PAREN, "Expect '(' after 'if',");
 
 	std::shared_ptr<Expr> condition = expression();
 	consume(RIGHT_PAREN, "Expect ')' after if condition.");
@@ -260,7 +259,9 @@ std::shared_ptr<Stmt> Parser::expressionStatement()
 // expressions -----------------------------------------------------
 
 std::shared_ptr<Expr> Parser::expression()
-{ return assignment(); }
+{
+	return assignment();
+}
 
 std::shared_ptr<Expr> Parser::assignment()
 {
@@ -279,10 +280,9 @@ std::shared_ptr<Expr> Parser::assignment()
 		}
 
 		// field
-		if (const auto* get = dynamic_cast<Expr::Get*>(expr.get()); get != nullptr)
+		if (const auto* field = dynamic_cast<Expr::Get*>(expr.get()); field != nullptr)
 		{
-			// nts: moving get->object would cause a bug, right?
-			return newShared<Expr::Set>(get->object, get->name, std::move(value));
+			return newShared<Expr::Set>(field->object, field->name, std::move(value));
 		}
 
 		(void)error(equals, "Invalid assignment target.");
@@ -388,6 +388,8 @@ std::shared_ptr<Expr> Parser::unary()
 
 std::shared_ptr<Expr> Parser::call()
 {
+	// function( args...)
+
 	std::shared_ptr<Expr> expr = primary();
 
 	while (true)
@@ -396,7 +398,6 @@ std::shared_ptr<Expr> Parser::call()
 		{
 			expr = finishCall(std::move(expr));
 		}
-		// nts: the else here can be removed and can save a small amount of time?
 		else if (match(DOT))
 		{
 			const Token name = consume(IDENTIFIER, "Expect property name after '.'.");
@@ -411,8 +412,11 @@ std::shared_ptr<Expr> Parser::call()
 	return expr;
 }
 
-std::shared_ptr<Expr> Parser::finishCall(std::shared_ptr<Expr>&& callee)
+std::shared_ptr<Expr> Parser::finishCall(std::shared_ptr<Expr> callee)
 {
+	// "functionName(" has already been consumed and is in callee,
+	// this function will take care of the arguments and the closing ')'
+
 	std::vector<std::shared_ptr<Expr>> arguments;
 
 	if (!check(RIGHT_PAREN))
@@ -420,13 +424,12 @@ std::shared_ptr<Expr> Parser::finishCall(std::shared_ptr<Expr>&& callee)
 		do
 		{
 			// nts: make the maximum amount of arguments not a magic number
-			if (arguments.size() >= 8) { error(peek(), "Cannot have more than 8 arguments."); }
+			if (arguments.size() >= 8) { (void)error(peek(), "Cannot have more than 8 arguments."); }
 			arguments.push_back(expression());
 		} while (match(COMMA));
 	}
 	const Token paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
 
-	// nts: does moving callee prevent a copy here?
 	return newShared<Expr::Call>(std::move(callee), paren, std::move(arguments));
 }
 
@@ -435,7 +438,7 @@ std::shared_ptr<Expr> Parser::primary()
 	if (match(FALSE)) return newShared<Expr::Literal>(false);
 	if (match(TRUE)) return newShared<Expr::Literal>(true);
 	if (match(NIL)) return newShared<Expr::Literal>(object_t());
-	
+
 	if (match(NUMBER, STRING))
 	{
 		return newShared<Expr::Literal>(previous().literal);

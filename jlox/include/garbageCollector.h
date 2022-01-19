@@ -10,12 +10,12 @@ public:
 
 	std::shared_ptr<T> getShared() const
 	{
-		if (!m_ptr.lock())
+		auto ptr = m_ptr.lock();
+		if (!ptr)
 		{
-			// nts: better error message
-			throw std::exception("didn't call setShared();");
+			throw std::exception("called getShared() on an object that was never initialized with setShared().");
 		}
-		return m_ptr.lock();
+		return ptr;
 	}
 
 	void setShared(const std::shared_ptr<T>& ptr)

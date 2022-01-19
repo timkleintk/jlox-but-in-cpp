@@ -13,7 +13,7 @@ public:
 	LoxFunction(std::shared_ptr<Stmt::Function> declaration, std::shared_ptr<Environment> closure, bool isInitializer);
 	~LoxFunction() override = default;
 
-	bool operator==(const LoxFunction& as) const;
+	bool operator==(const LoxFunction& other) const;
 
 	LoxFunction bind(const LoxInstance& instance) const;
 
@@ -25,7 +25,6 @@ public:
 
 private:
 	std::shared_ptr<Stmt::Function> m_declaration = nullptr;
-
 	std::shared_ptr<Environment> m_closure = nullptr;
 	bool m_isInitializer;
 };

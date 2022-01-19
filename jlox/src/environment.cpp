@@ -9,18 +9,18 @@ Environment::Environment(std::shared_ptr<Environment> enclosing): m_enclosing(st
 {}
 
 
-std::shared_ptr<Environment> Environment::getEnclosing() const
+const std::shared_ptr<Environment>& Environment::getEnclosing() const
 {
 	return m_enclosing;
 }
 
 object_t Environment::get(const Token& name)
 {
-	// current scope
+	// try and find it in the current scope
 	if (const auto& it = m_values.find(name.lexeme); it != m_values.end())
 	{ return it->second; }
 
-	// enclosing scope
+	// resort to the enclosing scope
 	if (m_enclosing != nullptr)
 	{ return m_enclosing->get(name); }
 
@@ -34,12 +34,14 @@ object_t Environment::getAt(const size_t distance, const std::string& name)
 
 void Environment::assign(const Token& name, object_t value)
 {
+	// try and assign in the current scope
 	if (m_values.contains(name.lexeme))
 	{
 		m_values.at(name.lexeme) = std::move(value);
 		return;
 	}
 
+	// resort to enclosing scope
 	if (m_enclosing != nullptr)
 	{
 		m_enclosing->assign(name, std::move(value));
