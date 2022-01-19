@@ -19,11 +19,11 @@ bool LoxFunction::operator==(const LoxFunction& other) const
 }
 
 // returns a copy of the function with the "this" pointer bound
-LoxFunction LoxFunction::bind(const LoxInstance& instance) const
+std::shared_ptr<LoxFunction> LoxFunction::bind(const LoxInstance& instance) const
 {
 	auto environment = newShared<Environment>(m_closure);
 	environment->define("this", instance.getShared());
-	return { m_declaration, std::move(environment), m_isInitializer };
+	return newShared<LoxFunction>(m_declaration, std::move(environment), m_isInitializer);
 }
 
 object_t LoxFunction::call(Interpreter* interpreter, const std::vector<object_t>& arguments) const

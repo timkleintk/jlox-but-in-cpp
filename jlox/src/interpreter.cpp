@@ -91,10 +91,10 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 	}
 
 	// collect methods
-	std::unordered_map<std::string, LoxFunction> methods;
+	std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods;
 	for (const auto& method : stmt.methods)
 	{
-		methods.insert_or_assign(method->name.lexeme, LoxFunction(method, m_environment, method->name.lexeme == "init"));
+		methods.insert_or_assign(method->name.lexeme, newShared<LoxFunction>(method, m_environment, method->name.lexeme == "init"));
 	}
 
 	if (superclass != nullptr)
@@ -103,7 +103,7 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 	}
 
 	// assign the class to the class name
-	m_environment->assign(stmt.name, { newShared<LoxClass>(stmt.name.lexeme, std::move(superclass), std::move(methods)) });
+	m_environment->assign(stmt.name, newShared<LoxClass>(stmt.name.lexeme, std::move(superclass), std::move(methods)));
 }
 
 void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
@@ -244,13 +244,9 @@ object_t Interpreter::visitCallExpr(Expr::Call& expr)
 
 	LoxCallable* callable = nullptr;
 
-	LoxFunction func(nullptr, nullptr, false); // for if the returnvalue callee turns out to be a function instance
-	// nts: make this more robust
-
 	if (is<std::shared_ptr<LoxCallable>>(callee)) { callable = as<std::shared_ptr<LoxCallable>>(callee).get(); }
 	else if (is<std::shared_ptr<LoxClass>>(callee)) { callable = as<std::shared_ptr<LoxClass>>(callee).get(); }
-	else if (is<LoxFunction>(callee)) { func = as<LoxFunction>(callee); callable = &func; } 
-	//else if (is<std::shared_ptr<LoxFunction>>(callee)) { callable = as <std::shared_ptr<LoxFunction>>(callee).get(); }
+	else if (is<std::shared_ptr<LoxFunction>>(callee)) { callable = as <std::shared_ptr<LoxFunction>>(callee).get(); }
 
 	if (callable == nullptr)
 	{
@@ -325,15 +321,15 @@ object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 	const size_t distance = locals.at(expr.getShared());
 
 	const auto superclass = as<std::shared_ptr<LoxClass>>(m_environment->getAt(distance, "super"));
-	const std::optional<LoxFunction> method = superclass->findMethod(expr.method.lexeme);
+	const auto method = superclass->findMethod(expr.method.lexeme);
 
 	if (!method)
 	{
 		throw RuntimeError(expr.method, "Undefined property '" + expr.method.lexeme + "'.");
 	}
 
-	const auto instance = as <std::shared_ptr<LoxInstance>>(m_environment->getAt(distance - 1, "this"));
-	return { method->bind(*instance) };
+	const auto instance = as<std::shared_ptr<LoxInstance>>(m_environment->getAt(distance - 1, "this"));
+	return  method->bind(*instance);
 }
 
 object_t Interpreter::visitThisExpr(Expr::This& expr)
@@ -351,7 +347,7 @@ object_t Interpreter::visitUnaryExpr(Expr::Unary& expr)
 		return -as<double>(right);
 	case BANG:
 		return !IsTruthy(right);
-	default: 
+	default:
 		return {};
 	}
 }

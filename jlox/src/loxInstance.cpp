@@ -15,7 +15,7 @@ object_t LoxInstance::get(const Token& name)
 	}
 
 	// method
-	if (const auto method = m_class.findMethod(name.lexeme); method.has_value())
+	if (const auto method = m_class.findMethod(name.lexeme); method != nullptr)
 	{
 		// return a copy of the classes method, but with "this" defined in it's closure
 		return method->bind(*this);

@@ -34,7 +34,7 @@ std::string toString(const object_t& o)
 	}
 	if (is<std::shared_ptr<LoxClass>>(o)) return as<std::shared_ptr<LoxClass>>(o)->name;
 	if (is<std::shared_ptr<LoxInstance>>(o)) return as<std::shared_ptr<LoxInstance>>(o)->getClass().name + " instance";
-	if (is<LoxFunction>(o)) return "<LoxFunction>";
+	if (is<std::shared_ptr<LoxFunction>>(o)) return "<LoxFunction>";
 
 	return R"(<???>)";
 }
@@ -59,7 +59,7 @@ bool IsEqual(const object_t& a, const object_t& b)
 	EqualCheck(std::shared_ptr<LoxClass>);
 	EqualCheck(std::shared_ptr<LoxInstance>);
 	EqualCheck(std::shared_ptr<LoxCallable>);
-	EqualCheck(LoxFunction);
+	EqualCheck(std::shared_ptr<LoxFunction>);
 
 
 	// bug: not fully implemented

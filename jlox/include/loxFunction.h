@@ -15,7 +15,7 @@ public:
 
 	bool operator==(const LoxFunction& other) const;
 
-	LoxFunction bind(const LoxInstance& instance) const;
+	std::shared_ptr<LoxFunction> bind(const LoxInstance& instance) const;
 
 	object_t call(Interpreter* interpreter, const std::vector<object_t>& arguments) const override;
 	size_t arity() const override;
