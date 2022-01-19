@@ -23,20 +23,20 @@ std::string toString(const object_t& o)
 		return str;
 	}
 	if (is<bool>(o)) return as<bool>(o) ? "true" : "false";
-	if (is<LoxCallable*>(o))
+	if (is<std::shared_ptr<LoxCallable>>(o))
 	{
-		LoxCallable* p = as<LoxCallable*>(o);
+		LoxCallable* p = as<std::shared_ptr<LoxCallable>>(o).get(); // nts: dangling?
 		if (const auto* pp = dynamic_cast<LoxFunction*>(p))
 		{
 			return "<fn " + pp->getDeclaration()->name.lexeme + ">";
 		}
 		return "<native fn>";
 	}
-	if (is<LoxClass*>(o)) return as<LoxClass*>(o)->name;
-	if (is<LoxInstance*>(o)) return as<LoxInstance*>(o)->getClass().name + " instance";
+	if (is<std::shared_ptr<LoxClass>>(o)) return as<std::shared_ptr<LoxClass>>(o)->name;
+	if (is<std::shared_ptr<LoxInstance>>(o)) return as<std::shared_ptr<LoxInstance>>(o)->getClass().name + " instance";
 	if (is<LoxFunction>(o)) return "<LoxFunction>";
-	if (is<LoxClass>(o)) return "<LoxClass " + as<LoxClass>(o).name + ">";
-	if (is<LoxInstance>(o)) return "<LoxInstance" " of " + as<LoxInstance>(o).getClass().name + ">";
+	//if (is<LoxClass>(o)) return "<LoxClass " + as<LoxClass>(o).name + ">";
+	//if (is<LoxInstance>(o)) return "<LoxInstance" " of " + as<LoxInstance>(o).getClass().name + ">";
 
 	return R"(<???>)";
 }
@@ -58,9 +58,9 @@ bool IsEqual(const object_t& a, const object_t& b)
 	EqualCheck(bool);
 	EqualCheck(std::string);
 	EqualCheck(double);
-	EqualCheck(LoxClass*);
-	EqualCheck(LoxInstance*);
-	EqualCheck(LoxCallable*);
+	EqualCheck(std::shared_ptr<LoxClass>);
+	EqualCheck(std::shared_ptr<LoxInstance>);
+	EqualCheck(std::shared_ptr<LoxCallable>);
 	EqualCheck(LoxFunction);
 
 

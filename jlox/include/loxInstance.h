@@ -4,7 +4,7 @@
 
 class Token;
 
-class LoxInstance
+class LoxInstance: public GarbageCollectable<LoxInstance>
 {
 public:
 	LoxInstance(const LoxClass& klass);

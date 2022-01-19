@@ -281,8 +281,10 @@ void Resolver::resolveLocal(std::shared_ptr<Expr> expr, const Token& name) const
 {
 	for (size_t i = m_scopes.size(); i --> 0; ) // loops from m_scopes.size() - 1 to 0
 	{
+		// reverse loop over the scope stack and find the identifier
 		if (m_scopes._Get_container()[i].contains(name.lexeme))
 		{
+			// store the number of steps
 			m_interpreter.resolve(std::move(expr), m_scopes.size() - 1 - i);
 			return;
 		}

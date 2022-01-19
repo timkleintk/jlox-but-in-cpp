@@ -11,7 +11,7 @@ class LoxFunction;
 class LoxClass final : public LoxCallable
 {
 public:
-	LoxClass(std::string name, LoxClass* superclass, std::unordered_map<std::string, LoxFunction> methods);
+	LoxClass(std::string name, std::shared_ptr<LoxClass> superclass, std::unordered_map<std::string, LoxFunction> methods);
 	// nts: is this needed?
 	LoxClass& operator=(const LoxClass&) = delete;
 
@@ -23,7 +23,7 @@ public:
 	size_t arity() const override;
 
 	std::string name;
-	LoxClass* m_superclass; // nts: turn into shared_ptr
+	std::shared_ptr<LoxClass> m_superclass = nullptr;
 private:
 	std::unordered_map<std::string, LoxFunction> m_methods;
 };

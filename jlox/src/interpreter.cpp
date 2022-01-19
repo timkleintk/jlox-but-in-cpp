@@ -39,8 +39,8 @@ Interpreter::Interpreter()
 	globals = newShared<Environment>(nullptr);
 	m_environment = globals->getShared(); // nts: is getShared call even needed?
 
-	m_clockFunction = std::make_unique<ClockFunction>();
-	globals->define("clock", object_t(m_clockFunction.get()));
+	m_clockFunction = newShared<ClockFunction>();
+	globals->define("clock", object_t(m_clockFunction));
 }
 
 
@@ -70,16 +70,16 @@ void Interpreter::visitBlockStmt(Stmt::Block& stmt)
 
 void Interpreter::visitClassStmt(Stmt::Class& stmt)
 {
-	LoxClass* superclass = nullptr;
+	std::shared_ptr<LoxClass> superclass = nullptr;
 
 	if (stmt.superclass != nullptr)
 	{
 		const object_t lc = evaluate(stmt.superclass);
-		if (!is<LoxClass*>(lc))
+		if (!is<std::shared_ptr<LoxClass>>(lc))
 		{
 			throw RuntimeError(stmt.superclass->name, "Superclass must be a class.");
 		}
-		superclass = as<LoxClass*>(lc);
+		superclass = as<std::shared_ptr<LoxClass>>(lc);
 	}
 
 	m_environment->define(stmt.name.lexeme, {});
@@ -102,8 +102,7 @@ void Interpreter::visitClassStmt(Stmt::Class& stmt)
 		m_environment = m_environment->getEnclosing();
 	}
 
-	// nts: leak
-	m_environment->assign(stmt.name, object_t(new LoxClass(stmt.name.lexeme, superclass, std::move(methods))));
+	m_environment->assign(stmt.name, { newShared<LoxClass>(stmt.name.lexeme, std::move(superclass), std::move(methods)) });
 }
 
 void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
@@ -113,10 +112,9 @@ void Interpreter::visitExpressionStmt(Stmt::Expression& stmt)
 
 void Interpreter::visitFunctionStmt(Stmt::Function& stmt)
 {
-	// nts: leak
-	LoxCallable* lc = new LoxFunction(std::dynamic_pointer_cast<Stmt::Function>(stmt.getShared()), m_environment, false);
+	std::shared_ptr<LoxCallable> lc = newShared<LoxFunction>(std::dynamic_pointer_cast<Stmt::Function>(stmt.getShared()), m_environment, false);
 
-	m_environment->define(stmt.name.lexeme, lc);
+	m_environment->define(stmt.name.lexeme, std::move(lc));
 }
 
 void Interpreter::visitIfStmt(Stmt::If& stmt)
@@ -242,11 +240,14 @@ object_t Interpreter::visitCallExpr(Expr::Call& expr)
 	}
 
 	LoxCallable* callable = nullptr;
+	//std::shared_ptr<LoxCallable> callable = nullptr;
+
 	LoxFunction func(nullptr, nullptr, false); // for if the returnvalue callee turns out to be a function instance
 	// nts: make this more robust
-	if (is<LoxCallable*>(callee)) { callable = as<LoxCallable*>(callee); }
-	else if (is<LoxClass*>(callee)) { callable = as<LoxClass*>(callee); }
-	else if (is<LoxFunction>(callee)) { callable = new LoxFunction(as<LoxFunction>(callee)); }
+
+	if (is<std::shared_ptr<LoxCallable>>(callee)) { callable = as<std::shared_ptr<LoxCallable>>(callee).get(); } // nts: dangling pointer?
+	else if (is<std::shared_ptr<LoxClass>>(callee)) { callable = as<std::shared_ptr<LoxClass>>(callee).get(); }
+	else if (is<LoxFunction>(callee)) { func = as<LoxFunction>(callee); callable = &func; } // nts: I hate this
 
 	if (callable == nullptr)
 	{
@@ -258,15 +259,16 @@ object_t Interpreter::visitCallExpr(Expr::Call& expr)
 		throw RuntimeError(std::move(expr.paren), "Expected " + std::to_string(callable->arity()) + " arguments but got " + std::to_string(arguments.size()) + ".");
 	}
 
-	return callable->call(this, std::move(arguments));
+	return callable->call(this, arguments);
 }
 
 object_t Interpreter::visitGetExpr(Expr::Get& expr)
 {
 	const object_t object = evaluate(expr.object);
-	if (is<LoxInstance*>(object))
+	//if (is<LoxInstance*>(object))
+	if (is<std::shared_ptr<LoxInstance>>(object))
 	{
-		return as<LoxInstance*>(object)->get(expr.name);
+		return as<std::shared_ptr<LoxInstance>>(object)->get(expr.name);
 	}
 
 	throw RuntimeError(expr.name, "Only instances have properties.");
@@ -302,22 +304,23 @@ object_t Interpreter::visitSetExpr(Expr::Set& expr)
 {
 	const object_t object = evaluate(expr.object);
 
-	if (!is<LoxInstance*>(object))
+	if (!is<std::shared_ptr<LoxInstance>>(object))
 	{
 		throw RuntimeError(expr.name, "Only instances have fields.");
 	}
 
 	object_t value = evaluate(expr.value);
-	as<LoxInstance*>(object)->set(expr.name, value);
+	as<std::shared_ptr<LoxInstance>>(object)->set(expr.name, value);
 	return value;
 }
 
 object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 {
 	const size_t distance = locals.at(expr.getShared());
-	const LoxClass* const superclass = as<LoxClass*>(m_environment->getAt(distance, "super"));
+	const LoxClass* const superclass = as<std::shared_ptr<LoxClass>>(m_environment->getAt(distance, "super")).get(); // nts: dangling?
 
-	LoxInstance* instance = as<LoxInstance*>(m_environment->getAt(distance - 1, "this"));
+	//LoxInstance* instance = as<LoxInstance*>(m_environment->getAt(distance - 1, "this"));
+	const auto instance = as <std::shared_ptr<LoxInstance>>(m_environment->getAt(distance - 1, "this"));
 
 	const std::optional<LoxFunction> method = superclass->findMethod(expr.method.lexeme);
 
@@ -327,7 +330,7 @@ object_t Interpreter::visitSuperExpr(Expr::Super& expr)
 	}
 
 
-	return { method->bind(instance) };
+	return { method->bind(*instance) };
 }
 
 object_t Interpreter::visitThisExpr(Expr::This& expr)

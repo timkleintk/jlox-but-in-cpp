@@ -4,6 +4,7 @@
 
 #include "environment.h"
 #include "interpreter.h"
+#include "loxInstance.h"
 #include "return.h"
 
 LoxFunction::LoxFunction(std::shared_ptr<Stmt::Function> declaration, std::shared_ptr<Environment> closure, const bool isInitializer):
@@ -18,10 +19,10 @@ bool LoxFunction::operator==(const LoxFunction& as) const
 }
 
 // returns a copy of the function with the "this" pointer bound
-LoxFunction LoxFunction::bind(LoxInstance* instance) const
+LoxFunction LoxFunction::bind(const LoxInstance& instance) const
 {
 	auto environment = newShared<Environment>(m_closure);
-	environment->define("this", instance);
+	environment->define("this", instance.getShared());
 	return {m_declaration, std::move(environment), m_isInitializer};
 	//return std::make_unique<LoxFunction>(m_declaration, m_closure, m_isInitializer);
 }

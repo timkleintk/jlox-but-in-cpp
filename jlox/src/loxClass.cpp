@@ -6,9 +6,9 @@
 #include "loxInstance.h"
 #include "object.h"
 
-LoxClass::LoxClass(std::string name, LoxClass* superclass, std::unordered_map<std::string, LoxFunction> methods):
+LoxClass::LoxClass(std::string name, std::shared_ptr<LoxClass> superclass, std::unordered_map<std::string, LoxFunction> methods) :
 	name(std::move(name)),
-	m_superclass(superclass),
+	m_superclass(std::move(superclass)),
 	m_methods(std::move(methods))
 {}
 
@@ -33,24 +33,23 @@ std::optional<LoxFunction> LoxClass::findMethod(const std::string& methodName) c
 	return {};
 }
 
-object_t LoxClass::call(Interpreter * interpreter, const std::vector<object_t>& arguments) const
+object_t LoxClass::call(Interpreter* interpreter, const std::vector<object_t>& arguments) const
 {
-	// nts: leak
-	auto* instance = new LoxInstance(*this);
+	std::shared_ptr<LoxInstance> instance = newShared<LoxInstance>(*this);
 
 	if (const auto initializer = findMethod("init"); initializer.has_value())
 	{
-		// nts: double check if correct
-		//as<LoxFunction>(initializer).bind(instance).call(interpreter, arguments);
-		initializer.value().bind(instance).call(interpreter, arguments); // call the initializer?
+		initializer.value().bind(*instance).call(interpreter, arguments); // call the initializer
 	}
 
-	return {instance};
+	return { instance };
 }
 
 size_t LoxClass::arity() const
 {
 	if (const auto initializer = findMethod("init"); initializer.has_value())
-	{ return initializer->arity(); }
+	{
+		return initializer->arity();
+	}
 	return 0;
 }
