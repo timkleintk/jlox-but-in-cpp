@@ -32,7 +32,7 @@ private:
 template<class T, class... Args>
 std::shared_ptr<T> newShared(Args&&... args)
 {
-	std::shared_ptr<T> ptr = std::make_shared<T>(std::forward<Args>(args...));
+	std::shared_ptr<T> ptr = std::make_shared<T>(std::forward<Args>(args)...);
 	ptr->setShared(ptr);
 	return ptr;
 }
