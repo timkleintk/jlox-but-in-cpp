@@ -3,7 +3,7 @@
 #include "loxFunction.h"
 #include "RuntimeError.h"
 
-LoxInstance::LoxInstance(LoxClass klass) : m_class(std::move(klass))
+LoxInstance::LoxInstance(std::shared_ptr<LoxClass> klass) : m_class(std::move(klass))
 {}
 
 object_t LoxInstance::get(const Token& name)
@@ -15,7 +15,7 @@ object_t LoxInstance::get(const Token& name)
 	}
 
 	// method
-	if (const auto method = m_class.findMethod(name.lexeme); method != nullptr)
+	if (const auto method = m_class->findMethod(name.lexeme); method != nullptr)
 	{
 		// return a copy of the classes method, but with "this" defined in it's closure
 		return method->bind(*this);

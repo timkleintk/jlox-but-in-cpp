@@ -423,7 +423,6 @@ std::shared_ptr<Expr> Parser::finishCall(std::shared_ptr<Expr> callee)
 	{
 		do
 		{
-			// nts: make the maximum amount of arguments not a magic number
 			if (arguments.size() >= 8) { (void)error(peek(), "Cannot have more than 8 arguments."); }
 			arguments.push_back(expression());
 		} while (match(COMMA));

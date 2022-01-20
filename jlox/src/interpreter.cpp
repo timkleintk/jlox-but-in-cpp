@@ -360,6 +360,7 @@ object_t Interpreter::visitVariableExpr(Expr::Variable& expr)
 
 void Interpreter::resolve(std::shared_ptr<Expr> expr, size_t depth)
 {
+	// nts: entries never get removed from here
 	locals.emplace(std::move(expr), depth);
 }
 

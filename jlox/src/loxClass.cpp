@@ -17,13 +17,11 @@ bool LoxClass::operator==(const LoxClass& klass) const
 	return klass.name == name;
 }
 
-// nts: return const& ?
 std::shared_ptr<LoxFunction> LoxClass::findMethod(const std::string& methodName) const
 {
 	// try to find function in current class
 	if (m_methods.contains(methodName))
 	{
-		// nts: this returns a copy, not a reference
 		return m_methods.at(methodName);
 	}
 
@@ -38,7 +36,7 @@ std::shared_ptr<LoxFunction> LoxClass::findMethod(const std::string& methodName)
 
 object_t LoxClass::call(Interpreter* interpreter, const std::vector<object_t>& arguments) const
 {
-	std::shared_ptr<LoxInstance> instance = newShared<LoxInstance>(*this);
+	std::shared_ptr<LoxInstance> instance = newShared<LoxInstance>(std::dynamic_pointer_cast<LoxClass>(getShared()));
 
 	if (const auto initializer = findMethod("init"); initializer != nullptr)
 	{

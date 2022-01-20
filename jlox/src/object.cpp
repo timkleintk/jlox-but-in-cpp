@@ -25,7 +25,8 @@ std::string toString(const object_t& o)
 	if (is<bool>(o)) return as<bool>(o) ? "true" : "false";
 	if (is<std::shared_ptr<LoxCallable>>(o))
 	{
-		LoxCallable* p = as<std::shared_ptr<LoxCallable>>(o).get(); // nts: dangling?
+		LoxCallable* p;
+		p = as<std::shared_ptr<LoxCallable>>(o).get();
 		if (const auto* pp = dynamic_cast<LoxFunction*>(p); pp != nullptr)
 		{
 			return "<fn " + pp->getDeclaration()->name.lexeme + ">";
