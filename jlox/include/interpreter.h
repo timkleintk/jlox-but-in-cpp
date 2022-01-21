@@ -26,7 +26,7 @@ public:
 	void executeBlock(const std::vector<std::shared_ptr<Stmt>>& stmts, std::shared_ptr<Environment> environment);
 
 	std::shared_ptr<Environment> globals = nullptr;
-	std::unordered_map<std::shared_ptr<Expr>, size_t> locals; // nts: make it weak pointer?
+	std::unordered_map<std::shared_ptr<Expr>, size_t> locals;
 private:
 	std::shared_ptr<Environment> m_environment = nullptr;
 	std::shared_ptr<LoxCallable> m_clockFunction = nullptr;

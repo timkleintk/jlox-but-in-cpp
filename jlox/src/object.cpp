@@ -65,7 +65,6 @@ bool IsEqual(const object_t& a, const object_t& b)
 	EqualCheck(std::shared_ptr<LoxCallable>);
 	EqualCheck(std::shared_ptr<LoxFunction>);
 
-	// bug: not fully implemented
 	printf("Warning: tried to compare two values of unknown type. Known types: nil, bool, string, number, class.\n");
 
 	return false;
